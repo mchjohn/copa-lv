@@ -4,11 +4,11 @@ import { useAuth } from '@/features/auth/auth-context'
 
 function RequireAdminSkeleton() {
   return (
-    <div className="container mx-auto max-w-6xl space-y-3 px-4 py-8">
+    <div className="flex flex-col justify-center space-y-3 mx-auto px-4 py-8 max-w-6xl min-h-[60dvh] container">
       {Array.from({ length: 8 }, (_, i) => (
         <div
           key={i}
-          className="h-10 animate-pulse rounded-lg bg-muted"
+          className="bg-muted rounded-lg h-10 animate-pulse"
           style={{ width: `${100 - i * 6}%` }}
         />
       ))}

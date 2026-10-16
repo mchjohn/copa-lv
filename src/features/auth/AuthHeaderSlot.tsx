@@ -22,7 +22,7 @@ export function AuthHeaderSlot({ className }: { className?: string }) {
       <Link
         to="/login"
         className={cn(
-          'inline-flex items-center h-8 font-medium text-primary text-sm hover:underline',
+          'inline-flex items-center min-h-10 font-medium text-primary text-sm hover:underline',
           className,
         )}
       >

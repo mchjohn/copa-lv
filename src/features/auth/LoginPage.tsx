@@ -89,7 +89,7 @@ export function LoginPage() {
                 {formError}
               </p>
             ) : null}
-            <Button type="submit" className="w-full" disabled={isPending}>
+            <Button type="submit" className="w-full min-h-10" disabled={isPending}>
               {isPending ? 'Entrando…' : 'Entrar'}
             </Button>
           </form>

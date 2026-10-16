@@ -52,7 +52,7 @@
 }
 
 :root {
-  --radius: 0.625rem;
+  --radius: 0.75rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -92,7 +92,7 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply antialiased bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
     margin: 0;
     min-height: 100svh;
   }

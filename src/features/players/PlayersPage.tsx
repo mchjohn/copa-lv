@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { Pencil, Trash2 } from 'lucide-react'
 import { useState } from 'react'
+import { EmptyState } from '@/components/empty-state'
+import { PageHeader } from '@/components/page-header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useAuth } from '@/features/auth/auth-context'
@@ -24,48 +26,44 @@ export function PlayersPage() {
 
   return (
     <main className="mx-auto px-4 py-6 max-w-6xl container">
-      <div className="flex sm:flex-row flex-col sm:justify-between sm:items-center gap-4 mb-6">
-        <div>
-          <h1 className="font-semibold text-2xl tracking-tight">Jogadores</h1>
-          <p className="text-muted-foreground text-sm">
-            Banco global de participantes dos campeonatos.
-          </p>
-        </div>
-        {isAdmin ? (
-          <Button
-            type="button"
-            className="min-h-10"
-            onClick={() => setCreateOpen(true)}
-          >
-            Novo jogador
-          </Button>
-        ) : null}
-      </div>
+      <PageHeader
+        title="Jogadores"
+        description="Banco global de participantes dos campeonatos."
+        actions={
+          isAdmin ? (
+            <Button
+              type="button"
+              className="min-h-10"
+              onClick={() => setCreateOpen(true)}
+            >
+              Novo jogador
+            </Button>
+          ) : null
+        }
+      />
 
       {isLoading ? (
         <p className="text-muted-foreground text-sm">Carregando jogadores…</p>
       ) : isError ? (
-        <div className="flex flex-col items-start gap-3 bg-card p-6 border border-border rounded-xl">
-          <p className="text-sm">Falha ao carregar.</p>
-          <Button type="button" variant="outline" onClick={() => refetch()}>
+        <EmptyState>
+          <p className="mb-3">Falha ao carregar.</p>
+          <Button type="button" variant="outline" className="min-h-10" onClick={() => refetch()}>
             Tentar novamente
           </Button>
-        </div>
+        </EmptyState>
       ) : players.length === 0 ? (
-        <div className="bg-card/50 p-8 border border-border border-dashed rounded-xl text-center">
-          <p className="text-muted-foreground text-sm">
-            Nenhum jogador cadastrado ainda.
-          </p>
+        <EmptyState>
+          <p className="mb-3">Nenhum jogador cadastrado ainda.</p>
           {isAdmin ? (
             <Button
               type="button"
-              className="mt-4 min-h-10"
+              className="min-h-10"
               onClick={() => setCreateOpen(true)}
             >
               Novo jogador
             </Button>
           ) : null}
-        </div>
+        </EmptyState>
       ) : (
         <ul className="flex flex-col gap-2">
           {players.map((player) => (

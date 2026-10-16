@@ -24,7 +24,7 @@ export function TournamentStatusBadge({
     return (
       <Badge
         className={cn(
-          'border-cyan-500/40 bg-cyan-500/15 text-cyan-300',
+          'bg-cyan-500/15 border-cyan-500/40 text-cyan-300',
           className,
         )}
       >
@@ -35,7 +35,7 @@ export function TournamentStatusBadge({
   return (
     <Badge
       className={cn(
-        'border-purple-500/40 bg-purple-500/15 text-purple-300',
+        'bg-purple-500/15 border-purple-500/40 text-purple-300',
         className,
       )}
     >
@@ -55,7 +55,7 @@ export function MatchStatusBadge({
     return (
       <Badge
         className={cn(
-          'border-amber-500/40 bg-amber-500/15 text-amber-200',
+          'bg-amber-500/15 border-amber-500/40 text-amber-200',
           className,
         )}
       >
@@ -66,7 +66,7 @@ export function MatchStatusBadge({
   return (
     <Badge
       className={cn(
-        'border-emerald-500/40 bg-emerald-500/15 text-emerald-300',
+        'bg-success/15 border-success/40 text-success',
         className,
       )}
     >
