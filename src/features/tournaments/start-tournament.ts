@@ -74,6 +74,7 @@ export async function startTournament(
     const matchRows = bracket.map((item) => ({
       tournament_id: tournamentId,
       round_number: item.roundNumber,
+      phase: item.phase,
       status: 'pending' as const,
     }))
     const { data: insertedMatches, error: matchError } = await supabase

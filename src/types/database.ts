@@ -89,6 +89,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          phase: string
           round_number: number
           status: string
           tournament_id: string
@@ -96,6 +97,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          phase?: string
           round_number: number
           status?: string
           tournament_id: string
@@ -103,6 +105,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          phase?: string
           round_number?: number
           status?: string
           tournament_id?: string
@@ -187,6 +190,7 @@ export type Database = {
           game_image_url: string
           game_name: string
           id: string
+          include_final_match: boolean
           players_per_match: number
           status: string
           title: string
@@ -196,6 +200,7 @@ export type Database = {
           game_image_url: string
           game_name: string
           id?: string
+          include_final_match?: boolean
           players_per_match: number
           status?: string
           title: string
@@ -205,6 +210,7 @@ export type Database = {
           game_image_url?: string
           game_name?: string
           id?: string
+          include_final_match?: boolean
           players_per_match?: number
           status?: string
           title?: string

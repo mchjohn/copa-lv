@@ -34,8 +34,7 @@ type MatchPlayerRow = {
     | null
 }
 
-type MatchRow = Omit<Match, 'phase'> & {
-  phase?: MatchPhase | null
+type MatchRow = Match & {
   match_players: MatchPlayerRow[] | null
 }
 
@@ -85,7 +84,7 @@ export async function listTournamentMatches(
 
   const rows = (data ?? []) as MatchRow[]
   return rows.map((row) => {
-    const { match_players, phase: rowPhase, ...matchRest } = row
+    const { match_players, ...matchRest } = row
     const players: MatchCardPlayer[] = []
     for (const mp of match_players ?? []) {
       const player = embeddedPlayer(mp.players)
@@ -98,7 +97,8 @@ export async function listTournamentMatches(
         points_earned: mp.points_earned,
       })
     }
-    const phase: MatchPhase = rowPhase === 'final' ? 'final' : 'qualifying'
+    const phase: MatchPhase =
+      matchRest.phase === 'final' ? 'final' : 'qualifying'
     const match: Match = { ...matchRest, phase }
 
     return {
