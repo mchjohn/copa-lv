@@ -22,13 +22,19 @@ export function useLeaderboard(tournamentId: Uuid, enabled = true) {
   useEffect(() => {
     if (!enabled) return
 
+    let debounceTimer: ReturnType<typeof setTimeout> | undefined
+
     const refetch = () => {
-      void queryClient.invalidateQueries({
-        queryKey: leaderboardQueryKeys.byTournament(tournamentId),
-      })
-      void queryClient.invalidateQueries({
-        queryKey: matchesQueryKeys.byTournament(tournamentId),
-      })
+      if (debounceTimer !== undefined) clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(() => {
+        debounceTimer = undefined
+        void queryClient.invalidateQueries({
+          queryKey: leaderboardQueryKeys.byTournament(tournamentId),
+        })
+        void queryClient.invalidateQueries({
+          queryKey: matchesQueryKeys.byTournament(tournamentId),
+        })
+      }, 300)
     }
 
     const channel = supabase
@@ -50,6 +56,7 @@ export function useLeaderboard(tournamentId: Uuid, enabled = true) {
       })
 
     return () => {
+      if (debounceTimer !== undefined) clearTimeout(debounceTimer)
       void supabase.removeChannel(channel)
     }
   }, [tournamentId, enabled, queryClient])

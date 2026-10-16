@@ -52,10 +52,14 @@ export function TournamentDetailPage() {
 
   const showInProgressAdmin = isAdmin && data != null && isInProgress(data.status)
 
-  const { data: matchCards } = useQuery({
+  const {
+    data: matchCards,
+    isLoading: matchesLoading,
+    isError: matchesError,
+  } = useQuery({
     queryKey: matchesQueryKeys.byTournament(tournamentId),
     queryFn: () => listTournamentMatches(tournamentId),
-    enabled: Boolean(id) && showInProgressAdmin,
+    enabled: Boolean(id) && showRankedLeaderboard,
   })
 
   const readyToFinalize =
@@ -252,6 +256,9 @@ export function TournamentDetailPage() {
             <TournamentMatchesSection
               tournamentId={data.id}
               canEditResults={isInProgress(data.status)}
+              matchCards={matchCards}
+              isLoading={matchesLoading}
+              isError={matchesError}
             />
           </section>
 

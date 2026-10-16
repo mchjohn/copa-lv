@@ -73,29 +73,36 @@ export async function startTournament(
   }
 
   try {
-    for (const item of bracket) {
-      const { data: match, error: matchError } = await supabase
-        .from('matches')
-        .insert({
-          tournament_id: tournamentId,
-          round_number: item.roundNumber,
-          status: 'pending',
-        })
-        .select('id')
-        .single()
-      if (matchError) throw mapSupabaseError(matchError)
+    const matchRows = bracket.map((item) => ({
+      tournament_id: tournamentId,
+      round_number: item.roundNumber,
+      status: 'pending' as const,
+    }))
+    const { data: insertedMatches, error: matchError } = await supabase
+      .from('matches')
+      .insert(matchRows)
+      .select('id')
+    if (matchError) throw mapSupabaseError(matchError)
+    if (!insertedMatches || insertedMatches.length !== bracket.length) {
+      throw new DomainError(
+        'VALIDATION',
+        'Não foi possível criar todas as partidas do campeonato.',
+      )
+    }
 
-      const matchPlayerRows = item.playerIds.map((player_id) => ({
-        match_id: match.id,
+    const matchPlayerRows = bracket.flatMap((item, index) => {
+      const match_id = insertedMatches[index].id as Uuid
+      return item.playerIds.map((player_id) => ({
+        match_id,
         player_id,
         placement: null,
         points_earned: null,
       }))
-      const { error: playersError } = await supabase
-        .from('match_players')
-        .insert(matchPlayerRows)
-      if (playersError) throw mapSupabaseError(playersError)
-    }
+    })
+    const { error: playersError } = await supabase
+      .from('match_players')
+      .insert(matchPlayerRows)
+    if (playersError) throw mapSupabaseError(playersError)
   } catch (err) {
     await compensateFailedStart(tournamentId)
     throw err

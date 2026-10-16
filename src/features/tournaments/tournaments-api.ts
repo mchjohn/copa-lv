@@ -147,9 +147,45 @@ export async function listTournamentRoster(tournamentId: Uuid): Promise<Player[]
 export async function getTournamentWithRoster(
   id: Uuid,
 ): Promise<TournamentWithRoster> {
-  const tournament = await getTournament(id)
-  const players = await listTournamentRoster(id)
-  return { ...tournament, players }
+  const { data, error } = await supabase
+    .from('tournaments')
+    .select(
+      `
+      *,
+      tournament_players (
+        player_id,
+        players (*)
+      )
+    `,
+    )
+    .eq('id', id)
+    .maybeSingle()
+  if (error) throw mapSupabaseError(error)
+  if (!data) {
+    throw new DomainError('NOT_FOUND', 'Campeonato não encontrado.')
+  }
+
+  const { tournament_players, ...tournament } = data as Tournament & {
+    tournament_players: {
+      player_id: Uuid
+      players: Player | Player[] | null
+    }[]
+  }
+
+  const players: Player[] = []
+  for (const row of tournament_players ?? []) {
+    const embedded = row.players
+    if (
+      embedded &&
+      typeof embedded === 'object' &&
+      !Array.isArray(embedded) &&
+      'id' in embedded
+    ) {
+      players.push(embedded)
+    }
+  }
+
+  return { ...tournament, players: sortPlayersByName(players) }
 }
 
 export async function createTournament(

@@ -1,4 +1,3 @@
-import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -6,32 +5,28 @@ import { Card, CardContent } from '@/components/ui/card'
 import { useAuth } from '@/features/auth/auth-context'
 import { PlayerAvatar } from '@/features/players/PlayerAvatar'
 import { MatchResultDialog } from '@/features/tournaments/MatchResultDialog'
-import {
-  groupMatchesByRound,
-  listTournamentMatches,
-  matchesQueryKeys,
-  type MatchCard,
-} from '@/features/tournaments/matches-api'
+import { groupMatchesByRound, type MatchCard } from '@/features/tournaments/matches-api'
 import { placementWithPoints } from '@/features/tournaments/placement-label'
 import type { Uuid } from '@/types/domain'
 
 interface TournamentMatchesSectionProps {
   tournamentId: Uuid
   canEditResults: boolean
+  matchCards: MatchCard[] | undefined
+  isLoading: boolean
+  isError: boolean
 }
 
 export function TournamentMatchesSection({
   tournamentId,
   canEditResults,
+  matchCards: data,
+  isLoading,
+  isError,
 }: TournamentMatchesSectionProps) {
   const { isAdmin } = useAuth()
   const [dialogCard, setDialogCard] = useState<MatchCard | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
-
-  const { data, isLoading, isError } = useQuery({
-    queryKey: matchesQueryKeys.byTournament(tournamentId),
-    queryFn: () => listTournamentMatches(tournamentId),
-  })
 
   function openResultDialog(card: MatchCard) {
     setDialogCard(card)

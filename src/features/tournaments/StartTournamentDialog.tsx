@@ -37,15 +37,15 @@ export function StartTournamentDialog({
 
   const mutation = useMutation({
     mutationFn: () => startTournament(tournamentId, isAdmin),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success('Chaves geradas. Campeonato iniciado.')
-      void queryClient.invalidateQueries({
+      await queryClient.invalidateQueries({
         queryKey: tournamentsQueryKeys.detail(tournamentId),
       })
-      void queryClient.invalidateQueries({
+      await queryClient.invalidateQueries({
         queryKey: matchesQueryKeys.byTournament(tournamentId),
       })
-      void queryClient.invalidateQueries({
+      await queryClient.invalidateQueries({
         queryKey: leaderboardQueryKeys.byTournament(tournamentId),
       })
       onOpenChange(false)
