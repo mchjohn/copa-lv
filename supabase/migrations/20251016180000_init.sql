@@ -81,6 +81,12 @@ GROUP BY tp.tournament_id, p.id, p.name, p.avatar_url;
 
 GRANT SELECT ON view_leaderboard TO anon, authenticated;
 
+-- PostgREST roles need explicit table grants (RLS alone is not enough).
+GRANT SELECT ON tournaments, players, tournament_players, matches, match_players
+  TO anon, authenticated;
+GRANT INSERT, UPDATE, DELETE ON tournaments, players, tournament_players, matches, match_players
+  TO authenticated;
+
 -- RLS
 ALTER TABLE tournaments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE players ENABLE ROW LEVEL SECURITY;
