@@ -4,6 +4,11 @@ import type { Match, Uuid } from '@/types/domain'
 
 export const matchesQueryKeys = {
   byTournament: (tournamentId: Uuid) => ['matches', tournamentId] as const,
+  detail: (matchId: Uuid) => ['match', matchId] as const,
+}
+
+export const leaderboardQueryKeys = {
+  byTournament: (tournamentId: Uuid) => ['leaderboard', tournamentId] as const,
 }
 
 export interface MatchCardPlayer {

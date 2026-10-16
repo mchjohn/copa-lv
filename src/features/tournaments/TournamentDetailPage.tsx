@@ -192,7 +192,10 @@ export function TournamentDetailPage() {
       {isInProgress(data.status) ? (
         <section className="flex flex-col gap-4">
           <h2 className="font-semibold text-lg">Partidas</h2>
-          <TournamentMatchesSection tournamentId={data.id} />
+          <TournamentMatchesSection
+            tournamentId={data.id}
+            canEditResults={isInProgress(data.status)}
+          />
         </section>
       ) : null}
 
