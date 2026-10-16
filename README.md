@@ -1,3 +1,13 @@
+# COPA LV
+
+Campeonatos round robin (Vite + React 19 + Supabase). Decisões de arquitetura: [`docs/specs/00-decisoes.md`](docs/specs/00-decisoes.md).
+
+Copie `.env.example` para `.env` e preencha `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`.
+
+Após aplicar migrations no Supabase: `supabase gen types typescript --linked > src/types/database.ts`.
+
+---
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
