@@ -9,13 +9,7 @@ function assertKMatchSizeConsistent(
   tournamentK: PlayersPerMatch,
   matchSize: 2 | 3 | 4,
 ): void {
-  if (tournamentK === 2 && matchSize !== 2) {
-    throw new DomainError('VALIDATION', 'Partida incompatível com a modalidade.')
-  }
-  if (tournamentK === 3 && matchSize !== 3) {
-    throw new DomainError('VALIDATION', 'Partida incompatível com a modalidade.')
-  }
-  if (tournamentK === 4 && matchSize !== 3 && matchSize !== 4) {
+  if (matchSize !== tournamentK) {
     throw new DomainError('VALIDATION', 'Partida incompatível com a modalidade.')
   }
 }

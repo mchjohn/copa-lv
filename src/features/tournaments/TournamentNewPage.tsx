@@ -137,6 +137,7 @@ function TournamentNewForm() {
         <ModalityRadioGroup
           value={playersPerMatch}
           onChange={setPlayersPerMatch}
+          rosterCount={selectedIds.size}
           disabled={mutation.isPending}
         />
         </form>

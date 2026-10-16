@@ -1,6 +1,7 @@
 import {
   canGenerateKeys,
   generateBracket,
+  NOT_ENOUGH_PLAYERS_MESSAGE,
 } from '@/domain/round-robin'
 import { assertAdmin } from '@/features/auth/assert-admin'
 import { mapSupabaseError } from '@/lib/map-supabase-error'
@@ -50,10 +51,7 @@ export async function startTournament(
   const k = asPlayersPerMatch(tournament.players_per_match)
 
   if (!canGenerateKeys(n, k)) {
-    throw new DomainError(
-      'NOT_ENOUGH_PLAYERS',
-      'Número de jogadores insuficiente para gerar as chaves.',
-    )
+    throw new DomainError('NOT_ENOUGH_PLAYERS', NOT_ENOUGH_PLAYERS_MESSAGE)
   }
 
   const bracket = generateBracket(playerIds, k)

@@ -1,6 +1,6 @@
 import { mapSupabaseError } from '@/lib/map-supabase-error'
 import { supabase } from '@/lib/supabase'
-import type { Match, Uuid } from '@/types/domain'
+import type { Match, MatchPhase, Uuid } from '@/types/domain'
 
 export const matchesQueryKeys = {
   byTournament: (tournamentId: Uuid) => ['matches', tournamentId] as const,
@@ -34,7 +34,8 @@ type MatchPlayerRow = {
     | null
 }
 
-type MatchRow = Match & {
+type MatchRow = Omit<Match, 'phase'> & {
+  phase?: MatchPhase | null
   match_players: MatchPlayerRow[] | null
 }
 
@@ -84,7 +85,7 @@ export async function listTournamentMatches(
 
   const rows = (data ?? []) as MatchRow[]
   return rows.map((row) => {
-    const { match_players, ...match } = row
+    const { match_players, phase: rowPhase, ...matchRest } = row
     const players: MatchCardPlayer[] = []
     for (const mp of match_players ?? []) {
       const player = embeddedPlayer(mp.players)
@@ -97,6 +98,9 @@ export async function listTournamentMatches(
         points_earned: mp.points_earned,
       })
     }
+    const phase: MatchPhase = rowPhase === 'final' ? 'final' : 'qualifying'
+    const match: Match = { ...matchRest, phase }
+
     return {
       match,
       players: sortMatchPlayers(players, match.status),

@@ -9,7 +9,7 @@ describe('pointsForPlacement', () => {
     kValues: Array<2 | 3 | 4>
   }> = [
     { matchSize: 2, points: [1, 0], kValues: [2] },
-    { matchSize: 3, points: [2, 1, 0], kValues: [3, 4] },
+    { matchSize: 3, points: [2, 1, 0], kValues: [3] },
     { matchSize: 4, points: [3, 2, 1, 0], kValues: [4] },
   ]
 

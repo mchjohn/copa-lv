@@ -1,4 +1,5 @@
 import { Label } from '@/components/ui/label'
+import { qualifyingMatchCountForRoster } from '@/domain/round-robin'
 import {
   modalityBadgeLabel,
   modalityScoringSummary,
@@ -11,14 +12,18 @@ const OPTIONS: PlayersPerMatch[] = [2, 3, 4]
 interface ModalityRadioGroupProps {
   value: PlayersPerMatch
   onChange: (value: PlayersPerMatch) => void
+  rosterCount?: number
   disabled?: boolean
 }
 
 export function ModalityRadioGroup({
   value,
   onChange,
+  rosterCount = 0,
   disabled = false,
 }: ModalityRadioGroupProps) {
+  const matchCount = qualifyingMatchCountForRoster(rosterCount, value)
+
   return (
     <div className="flex flex-col gap-2">
       <Label>Modalidade</Label>
@@ -27,7 +32,7 @@ export function ModalityRadioGroup({
           <label
             key={k}
             className={cn(
-              'flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm has-disabled:cursor-not-allowed has-disabled:opacity-50',
+              'flex items-center gap-2 has-disabled:opacity-50 px-3 py-2 border border-border rounded-lg min-h-10 text-sm cursor-pointer has-disabled:cursor-not-allowed',
               value === k && 'border-primary/60 bg-primary/10',
             )}
           >
@@ -45,6 +50,12 @@ export function ModalityRadioGroup({
       </div>
       <p className="text-muted-foreground text-xs leading-relaxed">
         {modalityScoringSummary(value)}
+      </p>
+      <p className="text-muted-foreground text-xs leading-relaxed">
+        Cada jogador joga 3 partidas na TV.
+        {matchCount != null
+          ? ` ${rosterCount} jogadores → ${matchCount} partidas classificatórias.`
+          : ' Ajuste o número de jogadores para esta modalidade.'}
       </p>
     </div>
   )

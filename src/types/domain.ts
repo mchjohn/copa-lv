@@ -5,6 +5,7 @@ export type { Uuid }
 
 export type TournamentStatus = 'draft' | 'in_progress' | 'completed'
 export type MatchStatus = 'pending' | 'completed'
+export type MatchPhase = 'qualifying' | 'final'
 export type PlayersPerMatch = 2 | 3 | 4
 
 export interface Player {
@@ -35,6 +36,7 @@ export interface Match {
   id: Uuid
   tournament_id: Uuid
   round_number: number
+  phase: MatchPhase
   status: MatchStatus
   created_at: string
 }
@@ -61,10 +63,14 @@ export interface RankedLeaderboardRow extends LeaderboardRow {
   position: number
 }
 
-export interface CombinationMatch {
+export interface ScheduledMatch {
   playerIds: Uuid[]
   roundNumber: number
+  phase: MatchPhase
 }
+
+/** @deprecated use ScheduledMatch */
+export type CombinationMatch = ScheduledMatch
 
 export type PointsTable = readonly number[]
 

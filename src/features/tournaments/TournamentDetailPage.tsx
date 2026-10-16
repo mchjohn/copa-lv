@@ -11,7 +11,10 @@ import { Card, CardContent } from '@/components/ui/card'
 import { useAuth } from '@/features/auth/auth-context'
 import { PlayerAvatar } from '@/features/players/PlayerAvatar'
 import { canFinalize } from '@/domain/finalize-podium'
-import { canGenerateKeys, minPlayersForKeys } from '@/domain/round-robin'
+import {
+  canGenerateKeys,
+  qualifyingMatchCountForRoster,
+} from '@/domain/round-robin'
 import { DeleteTournamentDialog } from '@/features/tournaments/DeleteTournamentDialog'
 import { FinalizeTournamentDialog } from '@/features/tournaments/FinalizeTournamentDialog'
 import { StartTournamentDialog } from '@/features/tournaments/StartTournamentDialog'
@@ -115,7 +118,7 @@ export function TournamentDetailPage() {
   const k = asPlayersPerMatch(data.players_per_match)
   const n = data.players.length
   const keysReady = canGenerateKeys(n, k)
-  const minPlayers = minPlayersForKeys(k)
+  const qualifyingMatches = qualifyingMatchCountForRoster(n, k)
 
   return (
     <main className="mx-auto px-4 py-6 max-w-6xl container">
@@ -201,6 +204,17 @@ export function TournamentDetailPage() {
             </ul>
           )}
 
+          <div className="flex flex-col gap-1 text-muted-foreground text-sm">
+            <p>Cada jogador joga 3 partidas na TV.</p>
+            {qualifyingMatches != null ? (
+              <p>
+                {n} jogadores → {qualifyingMatches} partidas classificatórias.
+              </p>
+            ) : (
+              <p>Ajuste o número de jogadores para esta modalidade.</p>
+            )}
+          </div>
+
           {isAdmin ? (
             <div className="flex flex-col items-start gap-1">
               <Button
@@ -210,7 +224,7 @@ export function TournamentDetailPage() {
                 title={
                   keysReady
                     ? undefined
-                    : `Inclua pelo menos ${minPlayers} jogadores.`
+                    : 'Cada jogador precisa de 3 partidas classificatórias. Ajuste o elenco ou a modalidade.'
                 }
                 onClick={() => setStartOpen(true)}
               >
@@ -218,7 +232,8 @@ export function TournamentDetailPage() {
               </Button>
               {!keysReady ? (
                 <p className="text-muted-foreground text-sm">
-                  Inclua pelo menos {minPlayers} jogadores.
+                  Cada jogador precisa de 3 partidas classificatórias. Ajuste o
+                  elenco ou a modalidade.
                 </p>
               ) : null}
             </div>
@@ -282,6 +297,7 @@ export function TournamentDetailPage() {
       <StartTournamentDialog
         tournamentId={data.id}
         playerCount={n}
+        qualifyingMatchCount={qualifyingMatches ?? 0}
         open={startOpen}
         onOpenChange={setStartOpen}
       />

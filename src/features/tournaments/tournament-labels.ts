@@ -13,7 +13,7 @@ export function modalityScoringSummary(playersPerMatch: PlayersPerMatch): string
   if (playersPerMatch === 3) {
     return 'Pontuação por partida (FFA): 1º 2 pts · 2º 1 pt · 3º 0 pts.'
   }
-  return 'Pontuação por partida (FFA): 1º 3 pts · 2º 2 pts · 3º 1 pt · 4º 0 pts. Se a chave tiver só 3 jogadores: 2 / 1 / 0 pts.'
+  return 'Pontuação por partida (FFA): 1º 3 pts · 2º 2 pts · 3º 1 pt · 4º 0 pts.'
 }
 
 export function tournamentStatusLabel(status: TournamentStatus): string {

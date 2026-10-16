@@ -22,6 +22,7 @@ import { DomainError } from '@/types/errors'
 interface StartTournamentDialogProps {
   tournamentId: Uuid
   playerCount: number
+  qualifyingMatchCount: number
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -29,6 +30,7 @@ interface StartTournamentDialogProps {
 export function StartTournamentDialog({
   tournamentId,
   playerCount,
+  qualifyingMatchCount,
   open,
   onOpenChange,
 }: StartTournamentDialogProps) {
@@ -63,7 +65,8 @@ export function StartTournamentDialog({
         <DialogHeader>
           <DialogTitle>Gerar chaves e iniciar torneio</DialogTitle>
           <DialogDescription>
-            Gerar chaves para {playerCount} jogadores? O elenco será congelado.
+            Gerar {qualifyingMatchCount} partidas classificatórias para{' '}
+            {playerCount} jogadores? O elenco será congelado.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
