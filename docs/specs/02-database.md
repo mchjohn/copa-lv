@@ -27,6 +27,7 @@ Não exigir `citext`. Unicidade de nome via índice em `lower(name)`.
 | `game_name` | `text` | NOT NULL, CHECK `length(btrim(game_name)) > 0` |
 | `game_image_url` | `text` | NOT NULL, CHECK `length(game_image_url) > 0` |
 | `players_per_match` | `integer` | NOT NULL, CHECK `IN (2, 3, 4)` |
+| `include_final_match` | `boolean` | NOT NULL, default `true` quando `players_per_match = 4` na app; migration pode usar `default false` + trigger/app — **app** seta `true` no insert se k=4 (ADR-12) |
 | `status` | `text` | NOT NULL, default `'draft'`, CHECK `IN ('draft', 'in_progress', 'completed')` |
 | `created_at` | `timestamptz` | NOT NULL, default `now()` |
 
@@ -63,11 +64,14 @@ Nota: a spec narrativa dizia CASCADE em `player_id`. ADR-08 proíbe delete de jo
 | --- | --- | --- |
 | `id` | `uuid` | PK, default `gen_random_uuid()` |
 | `tournament_id` | `uuid` | NOT NULL, FK `tournaments(id)` ON DELETE CASCADE |
-| `round_number` | `integer` | NOT NULL, CHECK `round_number >= 1` |
+| `round_number` | `integer` | NOT NULL, CHECK `round_number >= 1` — **ordem na fila 1 TV** (classificatória `1..M`; final `M+1` se existir) |
+| `phase` | `text` | NOT NULL, default `'qualifying'`, CHECK `IN ('qualifying', 'final')` |
 | `status` | `text` | NOT NULL, default `'pending'`, CHECK `IN ('pending', 'completed')` |
 | `created_at` | `timestamptz` | NOT NULL, default `now()` |
 
 Índice: `(tournament_id, round_number)`.
+
+Índice parcial único: no máximo uma final por torneio — `matches_one_final_per_tournament_uidx` UNIQUE `(tournament_id) WHERE phase = 'final'`.
 
 #### `match_players`
 
@@ -96,9 +100,9 @@ SELECT
   p.id AS player_id,
   p.name AS player_name,
   p.avatar_url AS player_avatar,
-  COUNT(mp.id) FILTER (WHERE m.status = 'completed') AS matches_played,
-  COUNT(mp.id) FILTER (WHERE mp.placement = 1 AND m.status = 'completed') AS total_wins,
-  COALESCE(SUM(mp.points_earned) FILTER (WHERE m.status = 'completed'), 0) AS total_points
+  COUNT(mp.id) FILTER (WHERE m.status = 'completed' AND m.phase = 'qualifying') AS matches_played,
+  COUNT(mp.id) FILTER (WHERE mp.placement = 1 AND m.status = 'completed' AND m.phase = 'qualifying') AS total_wins,
+  COALESCE(SUM(mp.points_earned) FILTER (WHERE m.status = 'completed' AND m.phase = 'qualifying'), 0) AS total_points
 FROM tournament_players tp
 JOIN players p ON tp.player_id = p.id
 LEFT JOIN match_players mp ON mp.player_id = p.id

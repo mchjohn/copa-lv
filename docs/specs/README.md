@@ -35,7 +35,7 @@ Toda spec de capacidade (`01`–`11`) contém exatamente estas seções, nesta o
 01-stack-tooling → 11-ui-shell  (paralelo após 01; rotas finais alinhadas com 04–10)
 ```
 
-Não pule `07` para implementar UI de partidas: o motor Round Robin é função pura + testes Vitest **antes** da persistência.
+Não pule `07` para implementar UI de partidas: o motor de partidas (3 classificatórias/jogador + fila 1 TV) é função pura + testes Vitest **antes** da persistência.
 
 ## Índice
 
@@ -48,7 +48,7 @@ Não pule `07` para implementar UI de partidas: o motor Round Robin é função 
 | [04-auth.md](./04-auth.md) | Login admin, gates de UI | 01, 02, 03 |
 | [05-players.md](./05-players.md) | CRUD jogadores, avatar | 03, 04 |
 | [06-tournaments.md](./06-tournaments.md) | Draft, roster, listagens, delete | 05 |
-| [07-round-robin.md](./07-round-robin.md) | Geração de chaves C(n,k) | 06 |
+| [07-round-robin.md](./07-round-robin.md) | Classificatória 3×/jogador, fila 1 TV, grande final | 06 |
 | [08-match-results.md](./08-match-results.md) | Lançar/editar resultado | 07 |
 | [09-leaderboard-realtime.md](./09-leaderboard-realtime.md) | Tabela + Realtime | 08 |
 | [10-finalize-podium.md](./10-finalize-podium.md) | Finalizar + pódio | 09 |
@@ -58,6 +58,6 @@ Não pule `07` para implementar UI de partidas: o motor Round Robin é função 
 
 1. Implementar **uma spec por vez**. Não misturar motor de chaves com UI de pódio.
 2. Não inventar colunas, rotas, status ou pontos fora destas specs.
-3. Funções puras de domínio (`normalizePlayerName`, `combinations`, `packRounds`, `pointsForPlacement`, `rankLeaderboard`) vivem em `src/domain/` e são cobertas por Vitest.
+3. Funções puras de domínio (`normalizePlayerName`, `buildQualifyingMatches`, `scheduleSequentialOneTv`, `pointsForPlacement`, `rankLeaderboard`) vivem em `src/domain/` e são cobertas por Vitest.
 4. UI em português do Brasil. Código (identificadores) em inglês.
 5. Não instalar dependências não listadas em `01-stack-tooling.md`.

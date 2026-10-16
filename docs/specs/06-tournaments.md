@@ -27,7 +27,15 @@ export interface CreateTournamentInput {
   game_name: string
   game_image_url: string // já resolvido (upload ou recusado)
   players_per_match: PlayersPerMatch
+  include_final_match: boolean // default UI: true se k=4, senão false (ADR-12)
   playerIds: Uuid[]
+}
+
+export function qualifyingMatchCountForRoster(
+  playerCount: number,
+  k: PlayersPerMatch,
+): number | null {
+  // (playerCount * 3) / k se canGenerateKeys; senão null — espelha spec 07
 }
 
 export function normalizeTitle(raw: string): string {
@@ -61,21 +69,22 @@ Badges status:
 
 ### Criar (`/tournaments/new`) — só `isAdmin`; senão redirect `/login`
 
-1. Campos: título, nome do jogo, upload capa (obrigatório), modalidade radio `2 | 3 | 4` (default 4).
-2. `title = normalizeTitle`; `game_name = normalizeTitle`. Ambos length 1–80 senão `VALIDATION`.
-3. Upload capa **antes** do insert do torneio. Falha → não cria torneio.
-4. Insert `tournaments` (`status` default draft).
-5. Roster: multi-select da lista `players` (checkbox + busca por nome client-side, `includes` case-insensitive no nome normalizado).
-6. Botão no modal: “Novo jogador” abre `CreatePlayerDialog`; `onCreated` adiciona o id ao set selecionado e invalida `['players']`.
-7. `playerIds` pode ser vazio no create (draft incompleto permitido). Duplicatas no array: unique antes do insert.
-8. Insert `tournament_players` uma linha por id. Se um `player_id` inválido: abortar e **apagar o torneio** recém-criado (compensação), toast `VALIDATION`.
-9. Transação: PostgREST não tem tx multi-request. Ordem: insert tournament → insert roster. Compensação no passo 8. Documentar no código com comentário `// compensation: delete tournament if roster insert fails`.
-10. Toast `Campeonato criado.` Navigate `/tournaments/:id`.
+1. Campos: título, nome do jogo, upload capa (obrigatório), modalidade radio `2 | 3 | 4` (default 4), checkbox **Grande final** (`include_final_match`, default ligado só quando k=4; desligar permitido em qualquer modalidade em draft).
+2. Abaixo da modalidade, texto dinâmico (ADR-03): `Cada jogador joga 3 partidas na TV.` + se `qualifyingMatchCountForRoster(n, k)` não null: `{n} jogadores → {M} partidas classificatórias.`; se null: `Ajuste o número de jogadores para esta modalidade.`
+3. `title = normalizeTitle`; `game_name = normalizeTitle`. Ambos length 1–80 senão `VALIDATION`.
+4. Upload capa **antes** do insert do torneio. Falha → não cria torneio.
+5. Insert `tournaments` (`status` default draft, `include_final_match` do form).
+6. Roster: multi-select da lista `players` (checkbox + busca por nome client-side, `includes` case-insensitive no nome normalizado).
+7. Botão no modal: “Novo jogador” abre `CreatePlayerDialog`; `onCreated` adiciona o id ao set selecionado e invalida `['players']`.
+8. `playerIds` pode ser vazio no create (draft incompleto permitido). Duplicatas no array: unique antes do insert.
+9. Insert `tournament_players` uma linha por id. Se um `player_id` inválido: abortar e **apagar o torneio** recém-criado (compensação), toast `VALIDATION`.
+10. Transação: PostgREST não tem tx multi-request. Ordem: insert tournament → insert roster. Compensação no passo 9. Documentar no código com comentário `// compensation: delete tournament if roster insert fails`.
+11. Toast `Campeonato criado.` Navigate `/tournaments/:id`.
 
 ### Editar draft
 
 1. Se `status !== 'draft'` → `TOURNAMENT_NOT_DRAFT` (não montar rota; Navigate para detalhe).
-2. Permite alterar title, game_name, capa (novo upload substitui URL), `players_per_match`, roster (add/remove ids).
+2. Permite alterar title, game_name, capa (novo upload substitui URL), `players_per_match`, `include_final_match`, roster (add/remove ids).
 3. Roster replace: delete all `tournament_players` do torneio + insert conjunto novo **somente em draft**.
 4. Mudar `players_per_match` em draft é permitido (ainda não há matches).
 
@@ -94,7 +103,8 @@ Qualquer tentativa de insert/delete em `tournament_players` quando `status !== '
 ### Detalhe draft (admin)
 
 - Lista roster (avatar + nome).
-- Botão “Gerar Chaves e Iniciar Torneio” **existe** mas a implementação do click é spec 07. Nesta spec, o botão pode ficar **disabled** com tooltip `Implementado na spec 07` **somente se 07 ainda não foi feita**; quando 07 existir, o botão chama `startTournament(id)`.
+- Botão “Gerar Chaves e Iniciar Torneio” **existe** mas a implementação do click é spec 07. Quando 07 existir, o botão chama `startTournament(id)` se `canGenerateKeys(n, k)`; senão disabled com ajuda da spec 07.
+- Resumo no draft: `3 partidas por jogador` + `M` partidas na TV + indicador se grande final está ativa.
 - Visitante no draft: vê dados; sem botões de editar/gerar/excluir.
 
 ## 4. Edge Cases & Error Handling

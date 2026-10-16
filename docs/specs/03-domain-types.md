@@ -18,6 +18,7 @@ export type Uuid = string
 
 export type TournamentStatus = 'draft' | 'in_progress' | 'completed'
 export type MatchStatus = 'pending' | 'completed'
+export type MatchPhase = 'qualifying' | 'final'
 export type PlayersPerMatch = 2 | 3 | 4
 
 export interface Player {
@@ -33,6 +34,7 @@ export interface Tournament {
   game_name: string
   game_image_url: string
   players_per_match: PlayersPerMatch
+  include_final_match: boolean
   status: TournamentStatus
   created_at: string
 }
@@ -48,6 +50,7 @@ export interface Match {
   id: Uuid
   tournament_id: Uuid
   round_number: number
+  phase: MatchPhase
   status: MatchStatus
   created_at: string
 }
@@ -97,10 +100,14 @@ export class DomainError extends Error {
   }
 }
 
-export interface CombinationMatch {
+export interface ScheduledMatch {
   playerIds: Uuid[]
   roundNumber: number
+  phase: MatchPhase
 }
+
+/** @deprecated use ScheduledMatch — alias temporário para migração de código */
+export type CombinationMatch = ScheduledMatch
 
 export type PointsTable = readonly number[]
 ```
@@ -115,7 +122,7 @@ Mensagens de `DomainError` (pt-BR, para toast):
 | `PLAYER_IN_TOURNAMENT` | `Não é possível excluir um jogador vinculado a um campeonato.` |
 | `TOURNAMENT_NOT_DRAFT` | `Só é possível alterar o elenco em campeonatos em rascunho.` |
 | `ROSTER_FROZEN` | `O elenco deste campeonato está congelado.` |
-| `NOT_ENOUGH_PLAYERS` | `Número de jogadores insuficiente para gerar as chaves.` |
+| `NOT_ENOUGH_PLAYERS` | `Número de jogadores incompatível com a modalidade. Cada jogador deve jogar exatamente 3 partidas classificatórias.` |
 | `MATCH_NOT_EDITABLE` | `Resultados só podem ser lançados enquanto o campeonato está em andamento.` |
 | `TOURNAMENT_NOT_COMPLETABLE` | `Finalize somente quando todas as partidas tiverem resultado.` |
 | `NOT_FOUND` | `Registro não encontrado.` |
@@ -138,6 +145,7 @@ export interface TournamentInsert {
   game_name: string
   game_image_url: string
   players_per_match: PlayersPerMatch
+  include_final_match: boolean
 }
 
 export interface SaveMatchResultInput {
@@ -175,7 +183,7 @@ export const isInProgress = (s: TournamentStatus) => s === 'in_progress'
 export const isCompleted = (s: TournamentStatus) => s === 'completed'
 ```
 
-4. Não colocar lógica de Round Robin neste arquivo (spec 07).
+4. Não colocar lógica do motor de partidas (spec 07) neste arquivo.
 
 ## 4. Edge Cases & Error Handling
 

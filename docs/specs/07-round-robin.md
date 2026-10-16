@@ -1,185 +1,206 @@
-# 07 — Motor Round Robin (geração de chaves)
+# 07 — Motor de partidas (classificatória 3× + fila 1 TV)
 
 ## 1. Context & Objective
 
-Ao clicar “Gerar Chaves e Iniciar Torneio”, transicionar `draft` → `in_progress` e persistir todas as partidas `C(n, k_efetivo)` empacotadas em rodadas de forma **100% determinística**.
+Ao clicar “Gerar Chaves e Iniciar Torneio”, transicionar `draft` → `in_progress` e persistir todas as partidas **classificatórias** (`M = (N × 3) / k`), cada uma com `k` jogadores, ordenadas para execução **sequencial em 1 TV** com revezamento justo.
 
 Núcleo: funções puras em `src/domain/round-robin.ts` + testes Vitest **antes** da API Supabase.
+
+Contexto de produto: evento ~3 h, **12 jogadores**, **1 tela** — ver ADR-03 a ADR-05 e ADR-12.
 
 ## 2. Inputs / Outputs & Types
 
 ```ts
-import type { Uuid, PlayersPerMatch, CombinationMatch } from '@/types/domain'
+import type { Uuid, PlayersPerMatch, MatchPhase } from '@/types/domain'
 
-export function effectiveMatchSize(n: number, k: PlayersPerMatch): PlayersPerMatch {
-  if (k === 4 && n === 3) return 3
-  return k
+export function qualifyingMatchCount(n: number, k: PlayersPerMatch): number {
+  return (n * 3) / k
 }
 
 export function canGenerateKeys(n: number, k: PlayersPerMatch): boolean {
-  if (k === 2) return n >= 2
-  if (k === 3) return n >= 3
-  return n >= 3 // k === 4
+  // ADR-04
 }
 
-export function combinations<T>(items: readonly T[], k: number): T[][] {
-  // cada resultado é um array de length k
-  // ordem: lexicográfica sobre os índices do array de entrada
+export function buildQualifyingMatches(
+  playerIds: readonly Uuid[],
+  k: PlayersPerMatch,
+): Uuid[][] {
+  // length === qualifyingMatchCount(n, k); cada item length === k
 }
 
-export function packRounds(matches: readonly Uuid[][]): CombinationMatch[] {
-  // matches[i] = playerIds da i-ésima combinação (já ordenados)
+export function scheduleSequentialOneTv(matches: readonly Uuid[][]): ScheduledMatch[] {
+  // roundNumber 1..matches.length; uma partida por round
+}
+
+export interface ScheduledMatch {
+  playerIds: Uuid[]
+  roundNumber: number
+  phase: MatchPhase // sempre 'qualifying' aqui
 }
 
 export function generateBracket(
   playerIds: readonly Uuid[],
   k: PlayersPerMatch,
-): CombinationMatch[]
+): ScheduledMatch[]
+
+export function buildFinalMatch(
+  topPlayerIds: readonly Uuid[], // length === k, já na ordem do rank
+  afterRoundNumber: number,
+): ScheduledMatch // phase 'final', roundNumber === afterRoundNumber + 1
 ```
 
-`generateBracket` é a fachada usada pela API.
+`generateBracket` é a fachada usada por `startTournament`.
 
 Persistência: `startTournament(tournamentId: Uuid): Promise<void>` em `src/features/tournaments/start-tournament.ts`.
+
+Criação da final (após classificatória): `ensureFinalMatch(tournamentId: Uuid): Promise<void>` em `src/features/tournaments/ensure-final-match.ts` (disparada pela spec 08 ao concluir a última classificatória se `include_final_match`).
 
 ## 3. Step-by-Step Logic & Rules
 
 ### 3.1 Funções puras (ordem de implementação)
 
-**A. `combinations(items, k)`**
+**A. `qualifyingMatchCount(n, k)`**
 
-- Se `k < 1` ou `k > items.length`, retornar `[]` (a fachada não chama nesse estado inválido exceto testes).
-- Algoritmo iterativo ou recursivo clássico: índices crescentes `i0 < i1 < … < i(k-1)`.
-- Cada combinação copia `items[i]` **na ordem dos índices** (não reordenar dentro da combinação além da ordem de `items`).
+- Retornar `(n * 3) / k` assumindo pré-condição `canGenerateKeys`.
+- Implementação inteira (não float).
 
-**B. Ordenação de jogadores**
+**B. `canGenerateKeys(n, k)`** (ADR-04)
+
+- `k = 2`: `n >= 2` e `(n * 3) % 2 === 0`
+- `k = 3`: `n >= 3` e `(n * 3) % 3 === 0` (equivalente a `n` inteiro qualquer ≥ 3)
+- `k = 4`: `n >= 4` e `(n * 3) % 4 === 0`
+
+Não chamar backtracking aqui; apenas regras fechadas +, nos testes, `generateBracket` valida existência.
+
+**C. Ordenação de jogadores**
 
 ```ts
 const sorted = [...playerIds].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
 ```
 
-Comparação lexicográfica de string UUID (formato canônico lowercase com hífens). **Não** usar locale.
+Comparação lexicográfica de string UUID. **Não** usar `localeCompare`.
 
-**C. `effectiveMatchSize(n, k)`**
+**D. `buildQualifyingMatches(sorted, k)`**
 
-- `n === 3 && k === 4` → `3`
-- senão → `k`
+Objetivo: produzir exatamente `M = qualifyingMatchCount(n, k)` arrays de tamanho `k` tal que cada id em `sorted` apareça **exatamente 3 vezes** no multiset união de todas as chaves.
 
-**D. `packRounds(matches)`**
+Algoritmo determinístico — **backtracking**:
 
-Estado: `Map<roundNumber, Set<playerId>>` ocupação.
+1. `target = 3` aparições por jogador; `counts` map zerado.
+2. `matches = []`.
+3. `search()`:
+   - Se `matches.length === M`: sucesso se todo `counts[id] === 3`; senão falha.
+   - Gerar candidatos: todas as combinações de `k` ids distintos com `counts[id] < 3`, na **ordem lexicográfica** dos índices em `sorted` (reutilizar helper `combinations` interno se útil).
+   - Para cada candidato na ordem: incrementar counts, push, recursar; ao falhar, backtrack.
+4. Se nenhuma solução: lançar `DomainError('NOT_ENOUGH_PLAYERS', …)` (não deveria ocorrer quando ADR-04 passa; testar `n=12` nas três modalidades).
 
-Para cada `playerIds` em `matches` (ordem do array):
+**E. `scheduleSequentialOneTv(matches)`**
 
-1. `round = 1`
-2. Enquanto existir jogador de `playerIds` já presente em `occupied.get(round)`, `round += 1`
-3. Registrar todos os playerIds em `occupied[round]`
-4. Emitir `{ playerIds, roundNumber: round }`
+Entrada: `matches` na ordem estável produzida por `buildQualifyingMatches` (índice original `0..M-1` preservado para desempate).
 
-**E. `generateBracket(playerIds, k)`**
+Estado: `lastRound[playerId]` = último `roundNumber` em que jogou, ou `0` se nunca.
+
+Enquanto houver partidas não agendadas:
+
+1. Para cada partida candidata `P`, calcular `bottleneck(P) = min_{p ∈ P} (currentRound - lastRound[p])` onde jogadores que nunca jogaram tratam `lastRound[p] = 0` e `currentRound = scheduled.length + 1` **antes** de atribuir — na prática, para a primeira partida todos têm “espera” máxima; usar `wait(p) = scheduled.length - (lastRound[p] || 0)` com `lastRound` inicial 0 e após cada assign atualizar para o `roundNumber` atribuído.
+2. Escolher a partida com **maior** `bottleneck` (prioriza quem mais espera no grupo).
+3. Desempate 1: menor tupla lexicográfica de UUIDs da chave.
+4. Desempate 2: menor índice original em `matches`.
+5. Atribuir `roundNumber = scheduled.length + 1`, atualizar `lastRound` dos jogadores, remover da pilha.
+
+Emitir `{ playerIds, roundNumber, phase: 'qualifying' }`.
+
+Invariantes:
+
+- `roundNumber` único e contínuo `1..M`.
+- Cada partida mantém o mesmo multiset de jogadores da entrada (apenas reordena na fila).
+
+**F. `generateBracket(playerIds, k)`**
 
 ```
 n = playerIds.length
-if (!canGenerateKeys(n, k)) throw DomainError('NOT_ENOUGH_PLAYERS', ...)
+if (!canGenerateKeys(n, k)) throw NOT_ENOUGH_PLAYERS
 sorted = sortUuid(playerIds)
-size = effectiveMatchSize(n, k)
-raw = combinations(sorted, size)
-return packRounds(raw)
+raw = buildQualifyingMatches(sorted, k)
+return scheduleSequentialOneTv(raw)
 ```
 
-Cada `playerIds` em `raw` já está em ordem de `sorted`.
+**G. `buildFinalMatch(topPlayerIds, afterRoundNumber)`**
 
-**F. Cardinalidade**
+- `topPlayerIds.length === k` (validar; senão `VALIDATION`).
+- Retornar uma única `ScheduledMatch`: `playerIds` na ordem do rank (não reordenar por UUID), `phase: 'final'`, `roundNumber: afterRoundNumber + 1`.
 
-`raw.length === C(n, size)` onde `C(n,s) = n! / (s!(n-s)!)` (usar implementação inteira nos testes, não float).
+**H. Cardinalidade (N = 12, fixture obrigatória)**
 
-Caso especial `n=3,k=4`: `C(3,3) = 1`.
+| k | M | Aparições/jogador |
+| --- | --- | --- |
+| 2 | 18 | 3 |
+| 3 | 12 | 3 |
+| 4 | 9 | 3 |
+
+Testes Vitest devem assertar `generateBracket` com 12 UUIDs fixos (snapshot commitado) para cada `k`: total de partidas, contagem por jogador === 3, `roundNumber` 1..M sem buracos, uma partida por round.
 
 ### 3.2 Persistência `startTournament`
 
-Executar **nesta ordem**; abortar se qualquer passo falhar (sem “meio start” visível: compensar).
+Executar **nesta ordem**; abortar se qualquer passo falhar.
 
 1. `assertAdmin`.
 2. Load tournament by id. 0 rows → `NOT_FOUND`.
 3. Se `status !== 'draft'` → `TOURNAMENT_NOT_DRAFT`.
 4. Load roster `player_id[]`. `n = length`.
 5. `k = asPlayersPerMatch(tournament.players_per_match)`.
-6. Se `!canGenerateKeys(n, k)` → `NOT_ENOUGH_PLAYERS`.
+6. Se `!canGenerateKeys(n, k)` → `NOT_ENOUGH_PLAYERS` (mensagem ADR-04).
 7. `bracket = generateBracket(playerIds, k)`.
 8. Checar de novo `status === 'draft'` (race): `UPDATE tournaments SET status = 'in_progress' WHERE id = $id AND status = 'draft'`. Se `count === 0` → `TOURNAMENT_NOT_DRAFT`.
-9. Insert `matches`: para cada item de `bracket`, uma row `{ tournament_id, round_number, status: 'pending' }`. Capturar ids na **mesma ordem** que `bracket` (insert um-a-um em loop, ou insert batch se a API devolver rows na ordem enviada — **obrigatório preservar ordem**: preferir loop sequencial).
-10. Insert `match_players`: para cada partida, um row por player `{ match_id, player_id, placement: null, points_earned: null }`.
-11. Se passo 9 ou 10 falhar: `DELETE FROM matches WHERE tournament_id = id` e `UPDATE tournaments SET status = 'draft' WHERE id` (compensação). Relançar erro.
+9. Insert `matches`: para cada item de `bracket`, `{ tournament_id, round_number, status: 'pending', phase: 'qualifying' }`. Preservar ordem do array.
+10. Insert `match_players` como antes (`placement` / `points_earned` null).
+11. Compensação em falha 9/10: delete matches do torneio + `status = 'draft'`.
 12. Toast `Chaves geradas. Campeonato iniciado.` Invalidate `['tournaments', id]`, `['matches', id]`.
 
-Não inserir `round_number = 0`. Não criar byes como rows.
+**Não** inserir partida final no start. **Não** criar byes.
 
-### 3.3 UI
+### 3.3 `ensureFinalMatch` (resumo; detalhe na spec 08)
+
+1. Load tournament; se `!include_final_match` ou já existe match `phase = 'final'` → return.
+2. Se alguma classificatória `pending` → return (ou `VALIDATION` se chamada manual).
+3. `rank = rankLeaderboard(view_leaderboard rows)`; `top = rank.slice(0, k).map(r => r.player_id)`.
+4. `M = max(round_number)` das classificatórias.
+5. Insert final match + `match_players` via `buildFinalMatch(top, M)`.
+
+### 3.4 UI (detalhe em 08)
 
 - Botão visível só se `isAdmin && status === 'draft'`.
-- Disabled se `!canGenerateKeys(n, k)` com texto de ajuda: `Inclua pelo menos {min} jogadores.` onde `min` é 2 se k=2, senão 3.
-- Confirm dialog: `Gerar chaves para {n} jogadores? O elenco será congelado.`
-- Após sucesso, a página de detalhe passa a mostrar rodadas (spec 08 pode completar o painel; 07 deve listar partidas pending agrupadas por `round_number` asc, jogadores por nome).
+- Disabled se `!canGenerateKeys(n, k)` com ajuda: `Cada jogador precisa de 3 partidas classificatórias. Ajuste o elenco ou a modalidade.`
+- No formulário de criação (spec 06): ao mudar modalidade, mostrar texto dinâmico com `M` para **N atual do roster** (ex.: `12 jogadores → 9 partidas na TV`).
+- Confirm dialog: `Gerar {M} partidas classificatórias para {n} jogadores? O elenco será congelado.`
 
 ## 4. Edge Cases & Error Handling
 
 | Caso | Esperado |
 | --- | --- |
-| `k=2, n=2` | 1 partida, round 1, 2 players |
-| `k=2, n=3` | `C(3,2)=3` partidas. Packing: round 1 uma partida (2 players, 1 bye); outras partidas em rounds seguintes. Nunca 2 partidas no mesmo round (só 3 players). |
-| `k=2, n=4` | `C(4,2)=6`. Round 1 pode ter 2 partidas disjuntas. |
-| `k=3, n=3` | 1 partida size 3, round 1 |
-| `k=3, n=2` | `NOT_ENOUGH_PLAYERS` |
-| `k=4, n=3` | 1 partida size 3 (não 4), round 1 |
-| `k=4, n=2` | `NOT_ENOUGH_PLAYERS` |
-| `k=4, n=4` | `C(4,4)=1` partida com 4 |
-| `k=4, n=5` | `C(5,4)=5` partidas de **4** (não criar chave de 3). Cada round comporta no máx 1 partida (5 players, 4 jogam, 1 bye). |
-| IDs fora de ordem na entrada | saída idêntica à entrada já sorted — teste com shuffle |
-| Duas chamadas start | a segunda recebe `TOURNAMENT_NOT_DRAFT` |
-| Visitante | botão ausente; API `UNAUTHORIZED` |
-| `status=completed` | `TOURNAMENT_NOT_DRAFT` |
-| Combinations stability | mesmos IDs → mesmos `roundNumber` e mesmos grupos |
+| `N=12, k=2` | 18 partidas; 3 aparições/jogador; rounds 1..18 |
+| `N=12, k=3` | 12 partidas; rounds 1..12 |
+| `N=12, k=4` | 9 partidas; rounds 1..9 |
+| `k=2, n=3` | `canGenerateKeys` false `(9%2≠0)` |
+| `k=4, n=3` | false (`n < 4`) |
+| `k=4, n=5` | false `(15%4≠0)` |
+| `k=2, n=2` | `M=3`; cada um joga 3 duelos (repetição de confronto permitida) |
+| IDs fora de ordem na entrada | mesmo bracket que entrada sorted |
+| Duas chamadas start | segunda `TOURNAMENT_NOT_DRAFT` |
+| Backtracking sem solução | `NOT_ENOUGH_PLAYERS` (raro se ADR-04 ok) |
+| Schedule fairness | teste: em fixture N=12 k=4, nenhum jogador tem gap > limite documentado no snapshot (assertar `maxGap` ≤ 4 ou valor do snapshot) |
 
-Fixture obrigatória de packing (`k=2`, ids `['a','b','c','d']` **após sort**; usar UUIDs reais no teste, aqui ilustrativo):
-
-Se `sorted = [A,B,C,D]` com `A<B<C<D`, combinações 1v1 na ordem lex:
-
-1. AB
-2. AC
-3. AD
-4. BC
-5. BD
-6. CD
-
-Packing greedy:
-
-1. AB → round 1
-2. AC → round 2 (A ocupado r1)
-3. AD → round 3 (A em r1 e r2)
-4. BC → round 3? B livre r1? B está em r1 (AB). C livre r1. BC precisa round sem B e C: r1 tem B → skip; r2 tem A,C → skip; r3 tem A,D → B e C livres → **round 3**
-5. BD → …
-6. CD → …
-
-O teste **não** deve copiar uma tabela “inventada”: deve **executar** `packRounds` e travar o snapshot do resultado (Vitest `expect(result).toEqual(...)` gerado uma vez a partir da função, depois commitado). Incluir o snapshot explícito no teste após a primeira execução local.
-
-Para revisão humana, o invariante a assertar sempre:
-
-- União de players por round: conjuntos disjuntos.
-- Toda combinação aparece exatamente uma vez.
-- `roundNumber >= 1`.
-- `max(round)` é o mínimo greedy (não precisa provar otimalidade global além do algoritmo especificado).
+Removidos do modelo: `effectiveMatchSize`, empacotamento paralelo `packRounds`, byes, `C(n,k)` como contagem total.
 
 ## 5. Acceptance Criteria / Verification Checklist
 
-- [ ] Arquivo `src/domain/round-robin.ts` sem imports de React/Supabase.
-- [ ] Vitest `combinations` de `[1,2,3,4], k=2` tem length 6 e primeira `[1,2]` última `[3,4]`.
-- [ ] Vitest `canGenerateKeys` cobre a matriz k×n de 1..5.
-- [ ] Vitest `effectiveMatchSize(3,4)===3`, `(5,4)===4`, `(4,4)===4`.
-- [ ] Vitest shuffle de IDs → mesmo `generateBracket`.
-- [ ] Vitest packing: nenhum player repetido no mesmo `roundNumber`.
-- [ ] Vitest `n=5,k=4` → 5 matches, todas `playerIds.length===4`.
-- [ ] `startTournament` em draft com roster válido cria `C(n,size)` rows em `matches` e `size` rows cada em `match_players` com nulls.
-- [ ] Tournament `status` vira `in_progress`.
-- [ ] Segunda chamada falha sem duplicar matches (compensação ou guard).
-- [ ] `n` insuficiente não altera status.
-- [ ] Confirm dialog + toast de sucesso.
-- [ ] Roster não pode ser editado após sucesso (UI 06 + API `ROSTER_FROZEN`).
+- [ ] `src/domain/round-robin.ts` sem imports de React/Supabase.
+- [ ] Vitest `qualifyingMatchCount(12,4)===9`, `(12,3)===12`, `(12,2)===18`.
+- [ ] Vitest `canGenerateKeys` matriz ADR-04 (inclui `n=12` true para k=2,3,4).
+- [ ] Vitest `generateBracket` N=12: contagem 3 por jogador para cada k; snapshots de ordem da fila.
+- [ ] Vitest `scheduleSequentialOneTv`: uma partida por `roundNumber`; permutação das mesmas chaves.
+- [ ] `startTournament` cria `M` rows `phase=qualifying`; não cria final.
+- [ ] `status` → `in_progress`; segunda chamada falha.
+- [ ] `n` inválido não altera status.
+- [ ] Confirm + toast; roster congelado (`ROSTER_FROZEN`).
+- [ ] `ensureFinalMatch` após última classificatória cria 1 row `phase=final` com top `k` (spec 08 integração).

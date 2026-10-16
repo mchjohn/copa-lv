@@ -2,7 +2,9 @@
 
 ## 1. Context & Objective
 
-Tabela de classificação por torneio, posição determinística, atualização ao vivo via Supabase Realtime e invalidate após mutações. Render na página `/tournaments/:id` (coluna principal abaixo ou ao lado das partidas).
+Tabela de **classificação da fase classificatória** por torneio (pontos só de partidas `phase = 'qualifying'`), posição determinística, atualização ao vivo via Supabase Realtime e invalidate após mutações. Render na página `/tournaments/:id` (coluna principal abaixo ou ao lado das partidas).
+
+A grande final **não** altera esta tabela; serve para definir o pódio oficial (spec 10 / ADR-12).
 
 ## 2. Inputs / Outputs & Types
 
@@ -38,13 +40,15 @@ Colunas UI (nesta ordem): `Posição`, `Jogador`, `Partidas`, `Vitórias`, `Pont
 
 Jogador: avatar 32px + `player_name`.
 
+Título da seção: `Classificação` (subtítulo opcional: `Somente fase classificatória`).
+
 ## 3. Step-by-Step Logic & Rules
 
 ### Query
 
 1. `useQuery` fetch view filtrada pelo `tournament_id`.
 2. `select: rankLeaderboard`.
-3. Após `saveMatchResult` e `startTournament` e `finalizeTournament`: `invalidateQueries({ queryKey: ['leaderboard', id] })`.
+3. Após `saveMatchResult`, `startTournament`, `ensureFinalMatch` e `finalizeTournament`: `invalidateQueries({ queryKey: ['leaderboard', id] })`.
 
 ### Realtime
 
@@ -75,6 +79,7 @@ Cleanup: `supabase.removeChannel(channel)` no unmount.
 - Empate nos 3 primeiros critérios: desempate `player_name`; **posições distintas** (2, 3, 4… nunca “T2”).
 - Empty: se roster vazio (não deveria em in_progress): `Sem jogadores.`
 - Números: `matches_played`, `total_wins`, `total_points` como inteiros (view COUNT/SUM). Coerce `Number(...)` se o driver devolver string.
+- Com `include_final_match` e final já criada: opcionalmente marcar com ícone/tag os `k` primeiros do rank como `Classificados para a final` (somente visual; lista = snapshot usado em `ensureFinalMatch` no momento da criação).
 
 ### Onde renderiza
 
@@ -85,7 +90,9 @@ Cleanup: `supabase.removeChannel(channel)` no unmount.
 
 | Caso | Comportamento |
 | --- | --- |
-| Player no roster sem partida completed | 0 / 0 / 0, ainda entra no rank (desempate nome) |
+| Player no roster sem partida classificatória completed | 0 / 0 / 0, ainda entra no rank (desempate nome) |
+| Jogador com 3 classificatórias completed | `matches_played === 3` (isonomia ADR-03) |
+| Resultado da grande final salvo | leaderboard **inalterado** (view filtra `phase`) |
 | Dois players 0 pontos | ordem alfabética pt-BR |
 | Realtime disconnect | TanStack refetchOnWindowFocus default cobre; não mostrar modal de erro de socket |
 | Channel error | `console.error`; UI permanece com último snapshot |
@@ -113,7 +120,8 @@ function toLeaderboardRow(raw: Record<string, unknown>): LeaderboardRow {
 - [ ] Vitest `rankLeaderboard`: pontos > vitórias > menos partidas > nome.
 - [ ] Vitest: dois nomes, mesmos stats → ordem `localeCompare pt-BR`; positions 1 e 2.
 - [ ] Tabela tem as 5 colunas na ordem especificada.
-- [ ] Save resultado (outro tab ou invalidate) atualiza pontos sem reload manual.
+- [ ] Save resultado classificatório atualiza pontos sem reload manual.
+- [ ] Save resultado **final** não altera pontos exibidos.
 - [ ] `saveMatchResult` em partida já completed faz UPDATE em `matches` (touch realtime).
 - [ ] Unmount remove o channel.
 - [ ] Draft não mostra leaderboard ranqueado.

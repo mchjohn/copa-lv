@@ -2,7 +2,7 @@
 
 ## 1. Context & Objective
 
-Painel de partidas por rodada; modal para definir colocações distintas `1..size`; persistir `points_earned` via função pura; marcar partida `completed`. Edição permitida somente se o torneio está `in_progress`.
+Painel de partidas em **fila sequencial (1 TV)**; modal para definir colocações distintas `1..size`; persistir `points_earned` via função pura; marcar partida `completed`. Ao concluir a última classificatória, criar automaticamente a **grande final** se `include_final_match` (spec 07 `ensureFinalMatch`). Edição permitida somente se o torneio está `in_progress`.
 
 ## 2. Inputs / Outputs & Types
 
@@ -27,11 +27,13 @@ matchSize 3 → 1:2, 2:1, 3:0
 matchSize 4 → 1:3, 2:2, 3:1, 4:0
 ```
 
-`tournamentK` **não** altera a tabela se `matchSize` já for o tamanho real da partida. (O caso k=4 com 3 players usa `matchSize=3` → 2/1/0.) Se `tournamentK` e `matchSize` forem inconsistentes (ex. k=2 e matchSize=4), lançar `VALIDATION` `Partida incompatível com a modalidade.` Regras de consistência:
+Regras de consistência (classificatória e final):
 
 - `k=2` ⇒ `matchSize === 2`
 - `k=3` ⇒ `matchSize === 3`
-- `k=4` ⇒ `matchSize === 3 || matchSize === 4`
+- `k=4` ⇒ `matchSize === 4` (revogado partida classificatória com 3 jogadores em torneio k=4)
+
+Se `tournamentK` e `matchSize` forem inconsistentes, lançar `VALIDATION` `Partida incompatível com a modalidade.`
 
 `SaveMatchResultInput` (spec 03).
 
@@ -90,14 +92,16 @@ Falha → `VALIDATION` `Defina colocações distintas do 1º ao último.`
 7. Para cada placement, `points = pointsForPlacement({ tournamentK, matchSize, placement })`.
 8. Update **cada** `match_players` row: `placement`, `points_earned`.
 9. Update match `status = 'completed'` **sempre** (mesmo se já era `completed`). O UPDATE é obrigatório para disparar Realtime na spec 09 (touch da row). Recalc de pontos é permitido em `in_progress`.
-10. Toast: primeira conclusão `Resultado salvo.`; se já completed `Resultado atualizado.`
-11. Invalidate matches + leaderboard.
+10. Se `match.phase === 'qualifying'` e não restam classificatórias `pending` → chamar `ensureFinalMatch(tournamentId)` (spec 07). Erros de corrida: índice único `one final per tournament` torna idempotente.
+11. Toast: primeira conclusão `Resultado salvo.`; se já completed `Resultado atualizado.`
+12. Invalidate matches + leaderboard.
 
 Não recalcular outras partidas. Não atualizar a view (é derivada).
 
 ### UI
 
-- Agrupar cards por `Rodada {n}`.
+- Seções: **Classificatória** (`phase === 'qualifying'`, labels `Partida {round_number}` — uma partida por número, fila 1 TV) e, se existir, **Grande final** (`phase === 'final'`).
+- Destaque visual na **primeira** partida `pending` da fila global (menor `round_number` pending): badge `Próxima na TV` (cyan).
 - Badge partida: `Pendente` (amarelo/amber) se pending; `Concluído` (green `#22c55e`) se completed.
 - Card mostra avatares + nomes; se completed, placement e pontos (`1º · 3 pts`).
 - CTA admin: `Lançar resultado` (pending) ou `Editar resultado` (completed) — ambos abrem o mesmo modal.
@@ -105,18 +109,19 @@ Não recalcular outras partidas. Não atualizar a view (é derivada).
 - Submit disabled enquanto algum jogador está sem colocação.
 - Visitante: cards visíveis, sem CTAs.
 - Torneio `completed`: somente leitura (spec 10); `saveMatchResult` recusa.
+- Copy na classificatória: `Cada jogador disputa 3 partidas nesta fase.`
 
 ## 4. Edge Cases & Error Handling
 
 | Caso | Comportamento |
 | --- | --- |
 | Empate tentado (dois 1º) | submit impossível; se API chamada direto, `VALIDATION` |
-| Partida 3 em k=4 | pontos 2/1/0 |
-| Partida 4 em k=4 | 3/2/1/0 |
-| Editar 1º↔2º | points_earned reescritos; leaderboard muda |
+| Última classificatória salva + `include_final_match` | `ensureFinalMatch` cria final pending com top `k` do leaderboard classificatório |
+| `include_final_match` false | nenhuma final; finalizar torneio após classificatória (spec 10) |
+| Editar 1º↔2º | points_earned reescritos; leaderboard classificatório muda (só qualifying na view) |
+| Pontos da final | persistidos em `match_players` mas **não** somam na view leaderboard |
 | Torneio completed | `MATCH_NOT_EDITABLE` |
 | Draft (não deveria haver matches) | se houver dado órfão, `MATCH_NOT_EDITABLE` |
-| Race: dois admins (não há; uma conta) | last write wins |
 | `placement` 0 | `VALIDATION` |
 | Anon | sem modal |
 
@@ -127,7 +132,8 @@ Não recalcular outras partidas. Não atualizar a view (é derivada).
 - [ ] Save pending → match `completed` e points corretos no banco.
 - [ ] Re-save troca pontos; view soma o novo valor (não duplica).
 - [ ] Save com torneio `completed` falha.
-- [ ] UI agrupa por rodada; badges corretos.
+- [ ] UI: seções classificatória/final; badge `Próxima na TV`.
 - [ ] Modal impede placements duplicados na UI.
 - [ ] Anônimo não vê botões de lançar/editar.
 - [ ] Toasts `Resultado salvo.` / `Resultado atualizado.`
+- [ ] Última classificatória dispara `ensureFinalMatch` quando flag ativa.
