@@ -1,88 +1,111 @@
 # COPA LV
 
-Campeonatos round robin (Vite + React 19 + Supabase). Decisões de arquitetura: [`docs/specs/00-decisoes.md`](docs/specs/00-decisoes.md).
+Plataforma para gerenciar campeonatos de eSports / retrogaming da **Copa Lagoinha de Videogame**. Cadastro de jogadores, torneios em formato **Round Robin** (todos contra todos), lançamento de resultados, classificação em tempo real e pódio.
 
-Copie `.env.example` para `.env` e preencha `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`.
+Visitantes navegam em modo leitura; administradores autenticados fazem CRUD e operam partidas.
 
-Após aplicar migrations no Supabase: `supabase gen types typescript --linked > src/types/database.ts`.
+## Funcionalidades
 
----
+- **Jogadores** — banco global com avatar (upload ou DiceBear)
+- **Torneios** — rascunho, roster, modalidades 1v1 / 3 / 4 jogadores por partida
+- **Chaves** — geração automática de combinações e rodadas (domínio puro + testes)
+- **Resultados** — registrar e editar colocações por partida
+- **Leaderboard** — tabela agregada com atualização via Supabase Realtime
+- **Finalização** — encerrar torneio e exibir pódio
 
-# React + TypeScript + Vite
+## Stack
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+| Camada | Tecnologia |
+| --- | --- |
+| Frontend | React 19, TypeScript, Vite 8 |
+| UI | Tailwind CSS v4, shadcn/ui, Framer Motion |
+| Dados | Supabase (PostgreSQL, Auth, Storage, Realtime) |
+| Estado servidor | TanStack Query v5 |
+| Rotas | React Router v8 |
+| Testes | Vitest, Testing Library |
 
-Currently, two official plugins are available:
+Decisões travadas: [`docs/specs/00-decisoes.md`](docs/specs/00-decisoes.md).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Pré-requisitos
 
-## React Compiler
+- Node.js 20+
+- Projeto no [Supabase](https://supabase.com) com Auth (conta admin criada no Dashboard)
+- [Supabase CLI](https://supabase.com/docs/guides/cli) (opcional, para migrations e `gen types`)
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+## Configuração local
 
-Note: This will impact Vite dev & build performances.
-You can also try [the experimental native React Compiler support in plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md#rust-react-compiler) by using `compiler: true` in the plugin options instead of using the Babel plugin.
+1. Instale dependências:
 
-## Expanding the ESLint configuration
+   ```bash
+   npm install
+   ```
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+2. Copie o exemplo de variáveis e preencha a URL e a anon key do projeto:
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+   ```bash
+   cp .env.example .env
+   ```
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+   | Variável | Descrição |
+   | --- | --- |
+   | `VITE_SUPABASE_URL` | URL do projeto Supabase |
+   | `VITE_SUPABASE_ANON_KEY` | Chave pública (anon) — nunca use service role no client |
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+3. Aplique o schema no banco. O DDL canônico está em [`supabase/migrations/20251016180000_init.sql`](supabase/migrations/20251016180000_init.sql) (SQL Editor do Supabase ou `supabase db push` com projeto linkado). Detalhes em [`docs/specs/02-database.md`](docs/specs/02-database.md).
 
-```
+4. Gere os tipos TypeScript do banco (após o schema aplicado):
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+   ```bash
+   supabase gen types typescript --linked > src/types/database.ts
+   ```
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+5. Suba o app:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+   ```bash
+   npm run dev
+   ```
+
+Rotas principais: `/tournaments`, `/players`, `/login`.
+
+## Scripts
+
+| Comando | Uso |
+| --- | --- |
+| `npm run dev` | Servidor de desenvolvimento (Vite) |
+| `npm run build` | Typecheck + build de produção |
+| `npm run preview` | Preview do build |
+| `npm run lint` | ESLint |
+| `npm run test` | Vitest em modo watch |
+| `npm run test:run` | Vitest uma vez (CI) |
+
+## Estrutura do código
 
 ```
+src/
+  app/           # layout, router, providers
+  components/    # UI compartilhada e primitives shadcn
+  domain/        # lógica pura (round robin, pontos, leaderboard, …)
+  features/      # telas e APIs por capacidade (auth, players, tournaments, …)
+  lib/           # Supabase, env, query client, utils
+  types/         # contratos de domínio e (gerado) database.ts
+docs/
+  especificacao_do_projeto.md   # visão de produto
+  specs/                        # specs SDD de implementação (fonte de verdade)
+```
+
+## Permissões
+
+- **Público (anônimo):** somente leitura (RLS `SELECT` liberado).
+- **Autenticado:** qualquer sessão válida do Supabase Auth atua como admin (CRUD completo).
+
+Políticas e tabelas: spec [`04-auth`](docs/specs/04-auth.md) e [`02-database`](docs/specs/02-database.md).
+
+## Documentação
+
+| Documento | Conteúdo |
+| --- | --- |
+| [`docs/especificacao_do_projeto.md`](docs/especificacao_do_projeto.md) | Requisitos e visão de produto |
+| [`docs/specs/README.md`](docs/specs/README.md) | Índice das specs SDD e ordem de implementação |
+| [`docs/specs/00-decisoes.md`](docs/specs/00-decisoes.md) | ADRs (stack, round robin, pontuação, ciclo de vida) |
+
+Em conflito pontual entre a spec narrativa e `docs/specs/`, **as specs numeradas prevalecem**.
