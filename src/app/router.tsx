@@ -1,31 +1,30 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { AppLayout } from '@/app/AppLayout'
+import { NotFoundPage } from '@/app/NotFoundPage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { PlayersPage } from '@/features/players/PlayersPage'
-
-function HomePage() {
-  return (
-    <main className="flex flex-col justify-center items-center gap-4 mx-auto px-4 py-8 max-w-6xl min-h-[50svh] text-center container">
-      <h1 className="font-semibold text-primary text-3xl tracking-tight">
-        COPA LV
-      </h1>
-      <p className="text-muted-foreground">
-        Campeonatos round robin — em construção conforme specs.
-      </p>
-    </main>
-  )
-}
+import { TournamentDetailPage } from '@/features/tournaments/TournamentDetailPage'
+import { TournamentEditPage } from '@/features/tournaments/TournamentEditPage'
+import { TournamentNewPage } from '@/features/tournaments/TournamentNewPage'
+import { TournamentsPage } from '@/features/tournaments/TournamentsPage'
 
 export function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
         <Route element={<AppLayout />}>
-          <Route path="/" element={<HomePage />} />
+          <Route path="/" element={<Navigate to="/tournaments" replace />} />
+          <Route path="/tournaments" element={<TournamentsPage />} />
+          <Route path="/tournaments/new" element={<TournamentNewPage />} />
+          <Route path="/tournaments/:id" element={<TournamentDetailPage />} />
+          <Route
+            path="/tournaments/:id/edit"
+            element={<TournamentEditPage />}
+          />
           <Route path="/players" element={<PlayersPage />} />
         </Route>
         <Route path="/login" element={<LoginPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
   )
