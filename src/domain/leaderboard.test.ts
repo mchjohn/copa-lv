@@ -42,4 +42,14 @@ describe('rankLeaderboard', () => {
     expect(ranked.map((r) => r.player_name)).toEqual(['Carla', 'Ana', 'Bruno'])
     expect(ranked.map((r) => r.position)).toEqual([1, 2, 3])
   })
+
+  it('breaks ties on pt-BR name with distinct positions', () => {
+    const rows = [
+      base({ player_id: '1', player_name: 'Bruno' }),
+      base({ player_id: '2', player_name: 'Ana' }),
+    ]
+    const ranked = rankLeaderboard(rows)
+    expect(ranked.map((r) => r.player_name)).toEqual(['Ana', 'Bruno'])
+    expect(ranked.map((r) => r.position)).toEqual([1, 2])
+  })
 })

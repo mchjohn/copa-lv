@@ -13,6 +13,8 @@ import { PlayerAvatar } from '@/features/players/PlayerAvatar'
 import { canGenerateKeys, minPlayersForKeys } from '@/domain/round-robin'
 import { DeleteTournamentDialog } from '@/features/tournaments/DeleteTournamentDialog'
 import { StartTournamentDialog } from '@/features/tournaments/StartTournamentDialog'
+import { LeaderboardTable } from '@/features/leaderboard/LeaderboardTable'
+import { useLeaderboard } from '@/features/leaderboard/use-leaderboard'
 import { TournamentMatchesSection } from '@/features/tournaments/TournamentMatchesSection'
 import { modalityBadgeLabel } from '@/features/tournaments/tournament-labels'
 import {
@@ -34,6 +36,11 @@ export function TournamentDetailPage() {
     queryFn: () => getTournamentWithRoster(tournamentId),
     enabled: Boolean(id),
   })
+
+  const showRankedLeaderboard =
+    data != null && (isInProgress(data.status) || isCompleted(data.status))
+
+  const leaderboard = useLeaderboard(tournamentId, showRankedLeaderboard)
 
   if (!id) {
     return (
@@ -189,20 +196,31 @@ export function TournamentDetailPage() {
         </section>
       ) : null}
 
-      {isInProgress(data.status) ? (
-        <section className="flex flex-col gap-4">
-          <h2 className="font-semibold text-lg">Partidas</h2>
-          <TournamentMatchesSection
-            tournamentId={data.id}
-            canEditResults={isInProgress(data.status)}
-          />
-        </section>
-      ) : null}
+      {showRankedLeaderboard ? (
+        <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[1fr_360px]">
+          {isCompleted(data.status) ? (
+            <p className="order-1 lg:col-span-2 text-muted-foreground text-sm">
+              Pódio e resultados finais — spec 10.
+            </p>
+          ) : null}
 
-      {isCompleted(data.status) ? (
-        <p className="text-muted-foreground text-sm">
-          Pódio e resultados finais — spec 10.
-        </p>
+          <section className="flex flex-col gap-4 order-2 lg:order-1">
+            <h2 className="font-semibold text-lg">Partidas</h2>
+            <TournamentMatchesSection
+              tournamentId={data.id}
+              canEditResults={isInProgress(data.status)}
+            />
+          </section>
+
+          <section className="flex flex-col gap-4 order-1 lg:order-2">
+            <h2 className="font-semibold text-lg">Classificação</h2>
+            <LeaderboardTable
+              rows={leaderboard.data ?? []}
+              isLoading={leaderboard.isLoading}
+              isError={leaderboard.isError}
+            />
+          </section>
+        </div>
       ) : null}
 
       <StartTournamentDialog

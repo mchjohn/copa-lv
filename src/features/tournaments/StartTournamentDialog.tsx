@@ -10,7 +10,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useAuth } from '@/features/auth/auth-context'
-import { matchesQueryKeys } from '@/features/tournaments/matches-api'
+import {
+  leaderboardQueryKeys,
+  matchesQueryKeys,
+} from '@/features/tournaments/matches-api'
 import { startTournament } from '@/features/tournaments/start-tournament'
 import { tournamentsQueryKeys } from '@/features/tournaments/tournaments-api'
 import type { Uuid } from '@/types/domain'
@@ -41,6 +44,9 @@ export function StartTournamentDialog({
       })
       void queryClient.invalidateQueries({
         queryKey: matchesQueryKeys.byTournament(tournamentId),
+      })
+      void queryClient.invalidateQueries({
+        queryKey: leaderboardQueryKeys.byTournament(tournamentId),
       })
       onOpenChange(false)
     },
