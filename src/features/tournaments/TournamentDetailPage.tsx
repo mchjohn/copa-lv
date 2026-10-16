@@ -265,14 +265,14 @@ export function TournamentDetailPage() {
       ) : null}
 
       {showRankedLeaderboard ? (
-        <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[1fr_360px]">
+        <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(28rem,1.1fr)]">
           {isCompleted(data.status) ? (
             <div className="order-0 lg:col-span-2">
               <Podium rows={leaderboard.data ?? []} />
             </div>
           ) : null}
 
-          <section className="flex flex-col gap-4 order-2 lg:order-1">
+          <section className="flex flex-col gap-4 order-2 lg:order-1 min-w-0">
             <h2 className="font-semibold text-lg">Partidas</h2>
             <TournamentMatchesSection
               tournamentId={data.id}
@@ -283,7 +283,7 @@ export function TournamentDetailPage() {
             />
           </section>
 
-          <section className="flex flex-col gap-4 order-1 lg:order-2">
+          <section className="flex flex-col gap-4 order-1 lg:order-2 min-w-0">
             <h2 className="font-semibold text-lg">Classificação</h2>
             <LeaderboardTable
               rows={leaderboard.data ?? []}
