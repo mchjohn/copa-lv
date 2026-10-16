@@ -10,11 +10,18 @@ import { cn } from '@/lib/utils'
 import { Card, CardContent } from '@/components/ui/card'
 import { useAuth } from '@/features/auth/auth-context'
 import { PlayerAvatar } from '@/features/players/PlayerAvatar'
+import { canFinalize } from '@/domain/finalize-podium'
 import { canGenerateKeys, minPlayersForKeys } from '@/domain/round-robin'
 import { DeleteTournamentDialog } from '@/features/tournaments/DeleteTournamentDialog'
+import { FinalizeTournamentDialog } from '@/features/tournaments/FinalizeTournamentDialog'
 import { StartTournamentDialog } from '@/features/tournaments/StartTournamentDialog'
+import { Podium } from '@/features/leaderboard/Podium'
 import { LeaderboardTable } from '@/features/leaderboard/LeaderboardTable'
 import { useLeaderboard } from '@/features/leaderboard/use-leaderboard'
+import {
+  listTournamentMatches,
+  matchesQueryKeys,
+} from '@/features/tournaments/matches-api'
 import { TournamentMatchesSection } from '@/features/tournaments/TournamentMatchesSection'
 import { modalityBadgeLabel } from '@/features/tournaments/tournament-labels'
 import {
@@ -30,6 +37,7 @@ export function TournamentDetailPage() {
   const { isAdmin } = useAuth()
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [startOpen, setStartOpen] = useState(false)
+  const [finalizeOpen, setFinalizeOpen] = useState(false)
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: tournamentsQueryKeys.detail(tournamentId),
@@ -41,6 +49,18 @@ export function TournamentDetailPage() {
     data != null && (isInProgress(data.status) || isCompleted(data.status))
 
   const leaderboard = useLeaderboard(tournamentId, showRankedLeaderboard)
+
+  const showInProgressAdmin = isAdmin && data != null && isInProgress(data.status)
+
+  const { data: matchCards } = useQuery({
+    queryKey: matchesQueryKeys.byTournament(tournamentId),
+    queryFn: () => listTournamentMatches(tournamentId),
+    enabled: Boolean(id) && showInProgressAdmin,
+  })
+
+  const readyToFinalize =
+    matchCards != null &&
+    canFinalize(matchCards.map((card) => card.match))
 
   if (!id) {
     return (
@@ -196,12 +216,35 @@ export function TournamentDetailPage() {
         </section>
       ) : null}
 
+      {showInProgressAdmin ? (
+        <div className="flex flex-col items-start gap-1 mb-6">
+          <Button
+            type="button"
+            className="min-h-10"
+            disabled={!readyToFinalize}
+            title={
+              readyToFinalize
+                ? undefined
+                : 'Lance o resultado de todas as partidas para finalizar.'
+            }
+            onClick={() => setFinalizeOpen(true)}
+          >
+            Finalizar Campeonato
+          </Button>
+          {!readyToFinalize ? (
+            <p className="text-muted-foreground text-sm">
+              Lance o resultado de todas as partidas para finalizar.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       {showRankedLeaderboard ? (
         <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[1fr_360px]">
           {isCompleted(data.status) ? (
-            <p className="order-1 lg:col-span-2 text-muted-foreground text-sm">
-              Pódio e resultados finais — spec 10.
-            </p>
+            <div className="order-0 lg:col-span-2">
+              <Podium rows={leaderboard.data ?? []} />
+            </div>
           ) : null}
 
           <section className="flex flex-col gap-4 order-2 lg:order-1">
@@ -228,6 +271,13 @@ export function TournamentDetailPage() {
         playerCount={n}
         open={startOpen}
         onOpenChange={setStartOpen}
+      />
+
+      <FinalizeTournamentDialog
+        tournamentId={data.id}
+        title={data.title}
+        open={finalizeOpen}
+        onOpenChange={setFinalizeOpen}
       />
 
       <DeleteTournamentDialog
