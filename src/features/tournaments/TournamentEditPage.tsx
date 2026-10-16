@@ -23,6 +23,8 @@ import type { PlayersPerMatch, Uuid } from '@/types/domain'
 import { isDraft } from '@/types/domain'
 import { DomainError } from '@/types/errors'
 
+const TOURNAMENT_EDIT_FORM_ID = 'tournament-edit-form'
+
 function TournamentEditForm({
   tournament,
 }: {
@@ -98,10 +100,12 @@ function TournamentEditForm({
         description="Rascunho — metadados e elenco."
       />
 
-      <form
-        className="flex flex-col gap-6 mx-auto max-w-xl"
-        onSubmit={handleSubmit}
-      >
+      <div className="flex flex-col gap-6 mx-auto max-w-xl">
+        <form
+          id={TOURNAMENT_EDIT_FORM_ID}
+          className="flex flex-col gap-6"
+          onSubmit={handleSubmit}
+        >
         <div className="flex flex-col gap-2">
           <Label htmlFor="edit-tournament-title">Título</Label>
           <Input
@@ -148,6 +152,7 @@ function TournamentEditForm({
           onChange={setPlayersPerMatch}
           disabled={mutation.isPending}
         />
+        </form>
 
         <RosterPicker
           selectedIds={selectedIds}
@@ -167,11 +172,16 @@ function TournamentEditForm({
           >
             Cancelar
           </Link>
-          <Button type="submit" className="min-h-10" disabled={mutation.isPending}>
+          <Button
+            type="submit"
+            form={TOURNAMENT_EDIT_FORM_ID}
+            className="min-h-10"
+            disabled={mutation.isPending}
+          >
             {mutation.isPending ? 'Salvando…' : 'Salvar alterações'}
           </Button>
         </div>
-      </form>
+      </div>
     </main>
   )
 }

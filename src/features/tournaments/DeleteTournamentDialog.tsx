@@ -59,7 +59,7 @@ export function DeleteTournamentDialog({
             Partidas e resultados serão apagados.
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter className="border-0 bg-transparent p-0 sm:justify-end">
+        <DialogFooter>
           <Button
             type="button"
             variant="outline"

@@ -66,6 +66,7 @@ export function CreatePlayerDialog({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    event.stopPropagation()
     mutation.mutate({ name, file })
   }
 
@@ -104,7 +105,7 @@ export function CreatePlayerDialog({
               JPG, PNG ou WebP, até 2 MB. Sem foto, usamos avatar gerado.
             </p>
           </div>
-          <DialogFooter className="sm:justify-end bg-transparent p-0 border-0">
+          <DialogFooter>
             <Button
               type="button"
               variant="outline"

@@ -1,5 +1,8 @@
 import { Label } from '@/components/ui/label'
-import { modalityBadgeLabel } from '@/features/tournaments/tournament-labels'
+import {
+  modalityBadgeLabel,
+  modalityScoringSummary,
+} from '@/features/tournaments/tournament-labels'
 import type { PlayersPerMatch } from '@/types/domain'
 import { cn } from '@/lib/utils'
 
@@ -40,6 +43,9 @@ export function ModalityRadioGroup({
           </label>
         ))}
       </div>
+      <p className="text-muted-foreground text-xs leading-relaxed">
+        {modalityScoringSummary(value)}
+      </p>
     </div>
   )
 }

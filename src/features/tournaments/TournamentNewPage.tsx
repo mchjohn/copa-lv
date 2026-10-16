@@ -19,6 +19,8 @@ import {
 import type { PlayersPerMatch, Uuid } from '@/types/domain'
 import { DomainError } from '@/types/errors'
 
+const TOURNAMENT_NEW_FORM_ID = 'tournament-new-form'
+
 function TournamentNewForm() {
   const { isAdmin } = useAuth()
   const navigate = useNavigate()
@@ -78,10 +80,12 @@ function TournamentNewForm() {
         description="Metadados, capa e elenco inicial (rascunho)."
       />
 
-      <form
-        className="flex flex-col gap-6 mx-auto max-w-xl"
-        onSubmit={handleSubmit}
-      >
+      <div className="flex flex-col gap-6 mx-auto max-w-xl">
+        <form
+          id={TOURNAMENT_NEW_FORM_ID}
+          className="flex flex-col gap-6"
+          onSubmit={handleSubmit}
+        >
         <div className="flex flex-col gap-2">
           <Label htmlFor="tournament-title">Título</Label>
           <Input
@@ -135,6 +139,7 @@ function TournamentNewForm() {
           onChange={setPlayersPerMatch}
           disabled={mutation.isPending}
         />
+        </form>
 
         <RosterPicker
           selectedIds={selectedIds}
@@ -154,11 +159,16 @@ function TournamentNewForm() {
           >
             Cancelar
           </Link>
-          <Button type="submit" className="min-h-10" disabled={mutation.isPending}>
+          <Button
+            type="submit"
+            form={TOURNAMENT_NEW_FORM_ID}
+            className="min-h-10"
+            disabled={mutation.isPending}
+          >
             {mutation.isPending ? 'Salvando…' : 'Criar campeonato'}
           </Button>
         </div>
-      </form>
+      </div>
     </main>
   )
 }

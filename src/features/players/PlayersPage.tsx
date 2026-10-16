@@ -66,10 +66,16 @@ export function PlayersPage() {
         </EmptyState>
       ) : (
         <ul className="flex flex-col gap-2">
-          {players.map((player) => (
+          {players.map((player, index) => (
             <li key={player.id}>
               <Card className="py-0">
                 <CardContent className="flex items-center gap-3 p-3 sm:p-4">
+                  <span
+                    className="text-muted-foreground w-7 shrink-0 text-right text-sm tabular-nums"
+                    aria-hidden
+                  >
+                    {index + 1}
+                  </span>
                   <PlayerAvatar
                     name={player.name}
                     avatarUrl={player.avatar_url}

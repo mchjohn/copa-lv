@@ -179,10 +179,16 @@ export function TournamentDetailPage() {
             </p>
           ) : (
             <ul className="flex flex-col gap-2">
-              {data.players.map((player) => (
+              {data.players.map((player, index) => (
                 <li key={player.id}>
                   <Card className="py-0">
                     <CardContent className="flex items-center gap-3 p-3">
+                      <span
+                        className="w-7 tabular-nums text-muted-foreground text-sm text-right shrink-0"
+                        aria-hidden
+                      >
+                        {index + 1}
+                      </span>
                       <PlayerAvatar
                         name={player.name}
                         avatarUrl={player.avatar_url}

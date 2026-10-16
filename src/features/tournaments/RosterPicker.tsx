@@ -44,29 +44,47 @@ export function RosterPicker({
     onSelectedIdsChange(next)
   }
 
+  function selectAllPlayers() {
+    onSelectedIdsChange(new Set(players.map((p) => p.id)))
+  }
+
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-1 flex-col gap-2">
+      <div className="flex sm:flex-row flex-col sm:justify-between sm:items-end gap-2">
+        <div className="flex flex-col flex-1 gap-2">
           <Label htmlFor="roster-search">Participantes</Label>
           <Input
             id="roster-search"
             placeholder="Buscar por nome…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') e.preventDefault()
+            }}
             disabled={disabled}
             autoComplete="off"
           />
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          className="min-h-10 shrink-0"
-          disabled={disabled}
-          onClick={() => setCreateOpen(true)}
-        >
-          Novo jogador
-        </Button>
+        <div className="flex flex-wrap gap-2 shrink-0">
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-10"
+            disabled={disabled || players.length === 0}
+            onClick={selectAllPlayers}
+          >
+            Selecionar todos
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-10"
+            disabled={disabled}
+            onClick={() => setCreateOpen(true)}
+          >
+            Novo jogador
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -78,17 +96,23 @@ export function RosterPicker({
             : 'Nenhum jogador corresponde à busca.'}
         </p>
       ) : (
-        <ul className="flex max-h-64 flex-col gap-1 overflow-y-auto rounded-lg border border-border p-2">
-          {filtered.map((player) => {
+        <ul className="flex flex-col gap-1 p-2 border border-border rounded-lg max-h-64 overflow-y-auto">
+          {filtered.map((player, index) => {
             const checked = selectedIds.has(player.id)
             return (
               <li key={player.id}>
                 <label
-                  className="flex min-h-10 cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 hover:bg-muted/60 has-disabled:cursor-not-allowed has-disabled:opacity-50"
+                  className="flex items-center gap-3 hover:bg-muted/60 has-disabled:opacity-50 px-2 py-1.5 rounded-md min-h-10 cursor-pointer has-disabled:cursor-not-allowed"
                 >
+                  <span
+                    className="w-6 tabular-nums text-muted-foreground text-xs text-right shrink-0"
+                    aria-hidden
+                  >
+                    {index + 1}
+                  </span>
                   <input
                     type="checkbox"
-                    className="size-4 shrink-0 accent-primary"
+                    className="size-4 accent-primary shrink-0"
                     checked={checked}
                     disabled={disabled}
                     onChange={() => toggle(player.id)}
@@ -98,7 +122,7 @@ export function RosterPicker({
                     avatarUrl={player.avatar_url}
                     className="size-8"
                   />
-                  <span className="min-w-0 flex-1 truncate text-sm">
+                  <span className="flex-1 min-w-0 text-sm truncate">
                     {player.name}
                   </span>
                 </label>

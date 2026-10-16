@@ -125,7 +125,7 @@ function EditPlayerForm({
           </p>
         )}
       </div>
-      <DialogFooter className="sm:justify-end bg-transparent p-0 border-0">
+      <DialogFooter>
         <Button
           type="button"
           variant="outline"
