@@ -5,6 +5,7 @@ import { isValidPlayerName, normalizePlayerName } from '@/domain/player-name'
 describe('normalizePlayerName', () => {
   it('trims and collapses whitespace', () => {
     expect(normalizePlayerName('  Ana   Silva  ')).toBe('Ana Silva')
+    expect(normalizePlayerName('  a   b  ')).toBe('a b')
   })
 
   it('preserves case', () => {
@@ -26,5 +27,11 @@ describe('dicebearAvatarUrl', () => {
     expect(dicebearAvatarUrl('Ana Silva')).toBe(
       'https://api.dicebear.com/9.x/avataaars/svg?seed=Ana%20Silva',
     )
+  })
+
+  it('includes avataaars and seed for simple names', () => {
+    const url = dicebearAvatarUrl('Ana')
+    expect(url).toContain('avataaars')
+    expect(url).toContain('seed=Ana')
   })
 })
