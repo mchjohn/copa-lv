@@ -10,20 +10,24 @@ import { cn } from '@/lib/utils'
 import { Card, CardContent } from '@/components/ui/card'
 import { useAuth } from '@/features/auth/auth-context'
 import { PlayerAvatar } from '@/features/players/PlayerAvatar'
+import { canGenerateKeys, minPlayersForKeys } from '@/domain/round-robin'
 import { DeleteTournamentDialog } from '@/features/tournaments/DeleteTournamentDialog'
+import { StartTournamentDialog } from '@/features/tournaments/StartTournamentDialog'
+import { TournamentMatchesSection } from '@/features/tournaments/TournamentMatchesSection'
 import { modalityBadgeLabel } from '@/features/tournaments/tournament-labels'
 import {
   getTournamentWithRoster,
   tournamentsQueryKeys,
 } from '@/features/tournaments/tournaments-api'
 import type { Uuid } from '@/types/domain'
-import { isDraft, isInProgress, isCompleted } from '@/types/domain'
+import { asPlayersPerMatch, isDraft, isInProgress, isCompleted } from '@/types/domain'
 
 export function TournamentDetailPage() {
   const { id } = useParams<{ id: string }>()
   const tournamentId = id as Uuid
   const { isAdmin } = useAuth()
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [startOpen, setStartOpen] = useState(false)
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: tournamentsQueryKeys.detail(tournamentId),
@@ -77,6 +81,10 @@ export function TournamentDetailPage() {
   }
 
   const showDraftAdminActions = isAdmin && isDraft(data.status)
+  const k = asPlayersPerMatch(data.players_per_match)
+  const n = data.players.length
+  const keysReady = canGenerateKeys(n, k)
+  const minPlayers = minPlayersForKeys(k)
 
   return (
     <main className="mx-auto px-4 py-6 max-w-6xl container">
@@ -157,22 +165,35 @@ export function TournamentDetailPage() {
           )}
 
           {isAdmin ? (
-            <Button
-              type="button"
-              className="w-full sm:w-auto min-h-10"
-              disabled
-              title="Implementado na spec 07"
-            >
-              Gerar Chaves e Iniciar Torneio
-            </Button>
+            <div className="flex flex-col items-start gap-1">
+              <Button
+                type="button"
+                className="w-full sm:w-auto min-h-10"
+                disabled={!keysReady}
+                title={
+                  keysReady
+                    ? undefined
+                    : `Inclua pelo menos ${minPlayers} jogadores.`
+                }
+                onClick={() => setStartOpen(true)}
+              >
+                Gerar Chaves e Iniciar Torneio
+              </Button>
+              {!keysReady ? (
+                <p className="text-muted-foreground text-sm">
+                  Inclua pelo menos {minPlayers} jogadores.
+                </p>
+              ) : null}
+            </div>
           ) : null}
         </section>
       ) : null}
 
       {isInProgress(data.status) ? (
-        <p className="text-muted-foreground text-sm">
-          Partidas e placar em tempo real — spec 08–09.
-        </p>
+        <section className="flex flex-col gap-4">
+          <h2 className="font-semibold text-lg">Partidas</h2>
+          <TournamentMatchesSection tournamentId={data.id} />
+        </section>
       ) : null}
 
       {isCompleted(data.status) ? (
@@ -180,6 +201,13 @@ export function TournamentDetailPage() {
           Pódio e resultados finais — spec 10.
         </p>
       ) : null}
+
+      <StartTournamentDialog
+        tournamentId={data.id}
+        playerCount={n}
+        open={startOpen}
+        onOpenChange={setStartOpen}
+      />
 
       <DeleteTournamentDialog
         tournament={data}

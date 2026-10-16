@@ -19,6 +19,10 @@ export function canGenerateKeys(n: number, k: PlayersPerMatch): boolean {
   return n >= 3
 }
 
+export function minPlayersForKeys(k: PlayersPerMatch): number {
+  return k === 2 ? 2 : 3
+}
+
 export function combinations<T>(items: readonly T[], k: number): T[][] {
   if (k < 1 || k > items.length) return []
 

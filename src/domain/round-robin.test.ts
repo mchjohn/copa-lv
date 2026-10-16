@@ -4,8 +4,10 @@ import {
   combinations,
   effectiveMatchSize,
   generateBracket,
+  minPlayersForKeys,
   packRounds,
 } from '@/domain/round-robin'
+import type { PlayersPerMatch } from '@/types/domain'
 
 const A = '00000000-0000-4000-8000-000000000001'
 const B = '00000000-0000-4000-8000-000000000002'
@@ -23,14 +25,25 @@ describe('combinations', () => {
 })
 
 describe('canGenerateKeys', () => {
-  it('matches ADR-04 minimums', () => {
-    expect(canGenerateKeys(1, 2)).toBe(false)
-    expect(canGenerateKeys(2, 2)).toBe(true)
-    expect(canGenerateKeys(2, 3)).toBe(false)
-    expect(canGenerateKeys(3, 3)).toBe(true)
-    expect(canGenerateKeys(2, 4)).toBe(false)
-    expect(canGenerateKeys(3, 4)).toBe(true)
-    expect(canGenerateKeys(4, 4)).toBe(true)
+  const ks: PlayersPerMatch[] = [2, 3, 4]
+
+  it('covers n=1..5 for each k', () => {
+    const expected: Record<PlayersPerMatch, boolean[]> = {
+      2: [false, true, true, true, true],
+      3: [false, false, true, true, true],
+      4: [false, false, true, true, true],
+    }
+    for (const k of ks) {
+      for (let n = 1; n <= 5; n++) {
+        expect(canGenerateKeys(n, k)).toBe(expected[k][n - 1])
+      }
+    }
+  })
+
+  it('minPlayersForKeys matches modality', () => {
+    expect(minPlayersForKeys(2)).toBe(2)
+    expect(minPlayersForKeys(3)).toBe(3)
+    expect(minPlayersForKeys(4)).toBe(3)
   })
 })
 
